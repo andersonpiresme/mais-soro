@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#1351B4"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Mais Soro"/>
+  <meta name="description" content="Mais Soro - Encontre o hospital mais próximo com soro específico para acidentes com animais peçonhentos na Região Sul do Brasil"/>
+  <meta name="author" content="Anderson Pires"/>
+  <link rel="manifest" href="manifest.json"/>
+  <title>Mais Soro - Hospital mais próximo com soro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%231351B4'/><g transform='translate(18 18)'><path d='M22 0h20v22h22v20H42v22H22V42H0V22h22z' fill='%23168821'/><path d='M32 0h10v22h22v20H42v22H32z' fill='%230C326F'/><path d='M32 16 Q22 30 22 38 Q22 48 32 48 Q42 48 42 38 Q42 30 32 16 Z' fill='white'/></g></svg>"/>
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%231351B4'/><g transform='translate(18 18)'><path d='M22 0h20v22h22v20H42v22H22V42H0V22h22z' fill='%23168821'/><path d='M32 0h10v22h22v20H42v22H32z' fill='%230C326F'/><path d='M32 16 Q22 30 22 38 Q22 48 32 48 Q42 48 42 38 Q42 30 32 16 Z' fill='white'/></g></svg>"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #F8F8F8; overflow-x: hidden; }
+    #root { min-height: 100vh; }
+  </style>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+
+const HOSPITALS_DATA = [
+  { estado: "PR", municipio: "Cascavel", unidade: "Hospital de Ensino São Lucas (FAG)", endereco: "Rua Engenheiro Rebouças, 2219 - Centro", telefone: "(45) 3219-6464", cnes: "2738309", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -24.9573, lng: -53.4550 },
+  { estado: "PR", municipio: "Cascavel", unidade: "Hospital Universitário do Oeste do Paraná (HUOP)", endereco: "Av. Tancredo Neves, 3224 - Santo D'Onofre", telefone: "(45) 3321-5151", cnes: "2738368", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -24.9420, lng: -53.4340 },
+  { estado: "PR", municipio: "Cascavel", unidade: "Hospital do Coração", endereco: "Rua Carlos de Carvalho, 4191 - Centro", telefone: "(45) 3039-4848", cnes: "2738252", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -24.9555, lng: -53.4590 },
+  { estado: "PR", municipio: "Francisco Beltrão", unidade: "Hospital Regional do Sudoeste", endereco: "Rodovia Contorno Sul, 200 - Água Branca", telefone: "(46) 3520-9200", cnes: "6424341", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -26.0827, lng: -53.0500 },
+  { estado: "PR", municipio: "Francisco Beltrão", unidade: "Hospital São Francisco", endereco: "Rua Porto Alegre, 99 - Centro", telefone: "(46) 3211-2700", cnes: "2666731", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -26.0790, lng: -53.0540 },
+  { estado: "PR", municipio: "Toledo", unidade: "Hospital Dr. Campagnolo", endereco: "Rua Nossa Senhora do Rocio, 1810 - Centro", telefone: "(45) 3277-2020", cnes: "2809990", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -24.7135, lng: -53.7430 },
+  { estado: "PR", municipio: "Pato Branco", unidade: "ISSAL Instituto de Saúde São Lucas", endereco: "Rua Dr. Silvio Vidal, 67 - Centro", telefone: "(46) 3220-3544", cnes: "17884", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -26.2290, lng: -52.6700 },
+  { estado: "PR", municipio: "Guarapuava", unidade: "Hospital de Caridade São Vicente de Paulo", endereco: "Rua Marechal Floriano Peixoto, 1059 - Centro", telefone: "(42) 3621-7800", cnes: "2741989", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -25.3903, lng: -51.4620 },
+  { estado: "PR", municipio: "Foz do Iguaçu", unidade: "Hospital Municipal Padre Germano Lauk", endereco: "Rua Adoniran Barbosa, 370 - Jardim das Bandeiras", telefone: "(45) 3521-1951", cnes: "5061989", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -25.5163, lng: -54.5850 },
+  { estado: "PR", municipio: "Curitiba", unidade: "UPA Boa Vista", endereco: "Av. Paraná, 3564 - Boa Vista", telefone: "(41) 3251-1010", cnes: "17396", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -25.3905, lng: -49.2380 },
+  { estado: "PR", municipio: "Londrina", unidade: "Hospital Universitário Regional do Norte do Paraná (CIATox)", endereco: "Av. Robert Koch, 60 - Vila Operária", telefone: "(43) 3371-2244", cnes: "2781859", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -23.3230, lng: -51.1870 },
+  { estado: "PR", municipio: "Maringá", unidade: "Hospital Universitário de Maringá - CIATox", endereco: "Av. Mandacaru, 1590 - Zona 7", telefone: "(44) 3011-9431", cnes: "2587335", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -23.4090, lng: -51.9380 },
+  { estado: "PR", municipio: "Dois Vizinhos", unidade: "Hospital Pró-Vida", endereco: "Rua Inês Pinzon, 611 - Centro Norte", telefone: "(46) 3536-6991", cnes: "5232511", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -25.7380, lng: -53.0610 },
+  { estado: "PR", municipio: "Ampére", unidade: "Hospital e Maternidade Santa Rita", endereco: "Rua Visconde de Guarapuava, s/n - São Francisco", telefone: "(46) 3547-1000", cnes: "5621674", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -25.9190, lng: -53.4720 },
+  { estado: "PR", municipio: "Capanema", unidade: "Hospital do Sudoeste", endereco: "Rua Tupinambás, 191 - Centro", telefone: "(46) 3552-1441", cnes: "2586061", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Fonêutrico","Loxoscélico","Lonômico"], lat: -25.6690, lng: -53.8050 },
+  { estado: "SC", municipio: "Florianópolis", unidade: "Hospital Infantil Joana de Gusmão (CIATox)", endereco: "R. Rui Barbosa, 152", telefone: "(48) 3251.9000", cnes: "2391538", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Aracnídico","Lonômico"], lat: -27.5977, lng: -48.5482 },
+  { estado: "SC", municipio: "Joinville", unidade: "Hospital Municipal São José", endereco: "R. Plácido Olímpio de Oliveira, 1070", telefone: "(47) 3461.5000", cnes: "2498200", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Aracnídico","Lonômico"], lat: -26.3045, lng: -48.8487 },
+  { estado: "SC", municipio: "Chapecó", unidade: "Hospital Regional do Oeste", endereco: "R. Florianópolis, 1478", telefone: "(49) 3321.8800", cnes: "2385449", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Aracnídico","Lonômico"], lat: -27.0963, lng: -52.6158 },
+  { estado: "RS", municipio: "Porto Alegre", unidade: "Hospital de Pronto Socorro", endereco: "Largo Teodoro Herzl, s/nº, Bom Fim", telefone: "(51) 3289 7999", cnes: "2778718", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Loxoscélico","Fonêutrico","Lonômico"], lat: -30.0312, lng: -51.2070 },
+  { estado: "RS", municipio: "Caxias do Sul", unidade: "Hospital Geral de Caxias do Sul", endereco: "R. Prof. Antônio Vignoli, 255", telefone: "(54) 3218 7200", cnes: "2223538", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Loxoscélico","Fonêutrico","Lonômico"], lat: -29.1685, lng: -51.1794 },
+  { estado: "RS", municipio: "Passo Fundo", unidade: "Hospital São Vicente de Paulo", endereco: "R. Teixeira Soares, 808, Centro", telefone: "(54) 3316 4000", cnes: "2246988", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Loxoscélico","Fonêutrico","Lonômico"], lat: -28.2612, lng: -52.4083 },
+  { estado: "RS", municipio: "Santa Maria", unidade: "Hospital Universitário de Santa Maria", endereco: "Av. Roraima, 1000, Prédio 22", telefone: "(55) 3213 1400", cnes: "2244306", atendimentos: ["Botrópico","Crotálico","Elapídico","Escorpiônico","Loxoscélico","Fonêutrico","Lonômico"], lat: -29.7200, lng: -53.7146 },
+];
+
+const ANIMAL_TYPES = [
+  {
+    id: "cobra", label: "Cobra / Serpente", icon: "🐍",
+    subtypes: [
+      { id: "Botrópico", label: "Jararaca / Jararacuçu / Cotiara", desc: "Corpo grosso, cabeça triangular, padrão em 'V'", color: "#8B4513" },
+      { id: "Crotálico", label: "Cascavel", desc: "Chocalho na ponta da cauda, som de guizo", color: "#DAA520" },
+      { id: "Elapídico", label: "Coral Verdadeira", desc: "Anéis vermelhos, pretos e brancos/amarelos", color: "#DC143C" },
+    ]
+  },
+  {
+    id: "aranha", label: "Aranha", icon: "🕷️",
+    subtypes: [
+      { id: "Loxoscélico", label: "Aranha-marrom", desc: "Pequena, marrom, teia irregular em cantos escuros", color: "#8B6914" },
+      { id: "Fonêutrico", label: "Aranha-armadeira", desc: "Grande, agressiva, levanta as patas dianteiras", color: "#654321" },
+      { id: "Aracnídico", label: "Outra aranha / não sei qual", desc: "Atendimento geral para aracnídeos", color: "#555" },
+    ]
+  },
+  {
+    id: "escorpiao", label: "Escorpião", icon: "🦂",
+    subtypes: [{ id: "Escorpiônico", label: "Escorpião (Tityus)", desc: "Escorpião amarelo ou marrom", color: "#B8860B" }]
+  },
+  {
+    id: "lagarta", label: "Lagarta / Taturana", icon: "🐛",
+    subtypes: [{ id: "Lonômico", label: "Taturana (Lonomia)", desc: "Lagarta verde com espinhos, vive em troncos", color: "#228B22" }]
+  },
+];
+
+// ── Dados clínicos de urgência por tipo de acidente ──
+// Fonte: Manual de Diagnóstico e Tratamento de Acidentes por Animais Peçonhentos (Ministério da Saúde)
+const URGENCY_INFO = {
+  "Botrópico": {
+    janela: "Até 6h (ideal), eficaz até 12h",
+    urgencia: "alta",
+    corUrgencia: "#f59e0b",
+    sintomas: "Dor intensa, inchaço progressivo, sangramento no local, possível necrose",
+    riscoCrianca: "Maior risco de gravidade em crianças por menor massa corporal",
+    riscoLocal: "Picadas em cabeça, tronco ou próximas a vasos são mais graves",
+    oQueDizer: "Hora da picada, local no corpo, sintomas atuais (sangramento, inchaço), idade e peso da vítima",
+  },
+  "Crotálico": {
+    janela: "Até 6h (crítico), risco de insuficiência renal",
+    urgencia: "critica",
+    corUrgencia: "#dc2626",
+    sintomas: "Visão turva/dupla, pálpebras caídas, dor muscular, urina escura",
+    riscoCrianca: "Altíssimo risco para crianças, idosos e pessoas com doença renal",
+    riscoLocal: "Veneno neurotóxico age de forma sistêmica independente do local",
+    oQueDizer: "Hora da picada, se há visão turva, dor muscular, cor da urina, idade e peso",
+  },
+  "Elapídico": {
+    janela: "URGENTÍSSIMO: paralisia respiratória em 1 a 6h",
+    urgencia: "critica",
+    corUrgencia: "#dc2626",
+    sintomas: "Dificuldade para respirar, pálpebras caídas, fala arrastada, fraqueza",
+    riscoCrianca: "Extremamente perigoso para crianças, risco de parada respiratória",
+    riscoLocal: "Qualquer local é grave, veneno neurotóxico age rápido",
+    oQueDizer: "Hora da picada, se há dificuldade para respirar ou engolir, idade e peso",
+  },
+  "Escorpiônico": {
+    janela: "Até 2-3h para casos graves (crianças < 7 anos)",
+    urgencia: "alta",
+    corUrgencia: "#f59e0b",
+    sintomas: "Dor intensa local, formigamento, náusea, sudorese, agitação",
+    riscoCrianca: "PERIGO: crianças menores de 7 anos têm risco de óbito",
+    riscoLocal: "Picadas em tronco são mais graves que em extremidades",
+    oQueDizer: "Idade exata da criança, peso, hora da picada, vômitos ou agitação",
+  },
+  "Fonêutrico": {
+    janela: "Até 6h para casos graves, principalmente crianças",
+    urgencia: "moderada",
+    corUrgencia: "#f59e0b",
+    sintomas: "Dor intensa irradiada, sudorese, taquicardia, agitação",
+    riscoCrianca: "Crianças e idosos podem apresentar quadro grave",
+    riscoLocal: "Mãos e pés são os locais mais frequentes",
+    oQueDizer: "Hora da picada, intensidade da dor, se há sudorese ou taquicardia, idade",
+  },
+  "Loxoscélico": {
+    janela: "Soro eficaz nas primeiras 36h, ideal até 72h",
+    urgencia: "moderada",
+    corUrgencia: "#3b82f6",
+    sintomas: "Dor leve inicial que piora, mancha violácea no local, pode haver febre após 24h",
+    riscoCrianca: "Risco de hemólise (destruição de glóbulos) em crianças e forma cutâneo-visceral",
+    riscoLocal: "Coxa, tronco e braço são os locais mais comuns",
+    oQueDizer: "Hora da picada, aspecto da lesão (cor, tamanho), se há urina escura, idade",
+  },
+  "Lonômico": {
+    janela: "Até 12-24h, risco de hemorragia grave",
+    urgencia: "alta",
+    corUrgencia: "#f59e0b",
+    sintomas: "Dor em queimação, sangramento gengival, hematomas espontâneos, urina escura",
+    riscoCrianca: "Crianças e idosos com maior risco de sangramento interno",
+    riscoLocal: "Contato extenso (múltiplas cerdas) aumenta gravidade",
+    oQueDizer: "Hora do contato, área atingida, se há sangramento em gengivas ou hematomas, idade",
+  },
+  "Aracnídico": {
+    janela: "Procurar atendimento o mais rápido possível",
+    urgencia: "moderada",
+    corUrgencia: "#3b82f6",
+    sintomas: "Dor no local, inchaço, possível vermelhidão",
+    riscoCrianca: "Crianças e idosos requerem atenção especial",
+    riscoLocal: "Depende da espécie envolvida",
+    oQueDizer: "Hora da picada, descrição do animal (se possível foto), sintomas, idade e peso",
+  },
+};
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function SocorroPeconhentos() {
+  const [step, setStep] = React.useState(0);
+  const [animalType, setAnimalType] = React.useState(null);
+  const [specificType, setSpecificType] = React.useState(null);
+  const [userLocation, setUserLocation] = React.useState(null);
+  const [locationError, setLocationError] = React.useState(false);
+  const [results, setResults] = React.useState([]);
+  const [loadingGPS, setLoadingGPS] = React.useState(false);
+  const [gpsStatus, setGpsStatus] = React.useState("loading"); // loading | ok | fallback
+  const [expanded, setExpanded] = React.useState(null);
+  const [navAlert, setNavAlert] = React.useState(null);
+  const [triage, setTriage] = React.useState({ idade: null, tempo: null });
+  const [showUrgency, setShowUrgency] = React.useState(true);
+  const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
+  const [accidentStartTime, setAccidentStartTime] = React.useState(null);
+  const [fichaModal, setFichaModal] = React.useState(null); // hospital para ficha
+  const [localPicada, setLocalPicada] = React.useState("");
+  const topRef = React.useRef(null);
+
+  // ── AUTO-GPS no carregamento ──
+  React.useEffect(() => {
+    const useFallback = (reason) => {
+      console.warn("GPS fallback:", reason);
+      setUserLocation({ lat: -24.9573, lng: -53.4550 });
+      setGpsStatus("fallback");
+      setLocationError(true);
+    };
+
+    // Verifica se estamos em contexto seguro (HTTPS ou localhost)
+    const isSecure = window.isSecureContext || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (!isSecure) {
+      useFallback("Contexto não seguro, GPS requer HTTPS");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      useFallback("Geolocation API indisponível");
+      return;
+    }
+
+    // Tenta obter localização com alta precisão primeiro, depois baixa precisão
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsStatus("ok");
+      },
+      (err) => {
+        // Tenta novamente com baixa precisão (usa torre celular/wifi ao invés de GPS)
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setGpsStatus("ok");
+          },
+          (err2) => useFallback(`Erro código ${err2.code}: ${err2.message}`),
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  }, []);
+
+  // ── CRONÔMETRO: calcular tempo estimado do acidente baseado na triagem ──
+  React.useEffect(() => {
+    if (!triage.tempo) { setAccidentStartTime(null); return; }
+    const offsetMinutes = {
+      "menos1h": 30,
+      "1a3h": 120,
+      "3a6h": 270,
+      "mais6h": 420
+    }[triage.tempo] || 0;
+    const startTime = Date.now() - (offsetMinutes * 60 * 1000);
+    setAccidentStartTime(startTime);
+  }, [triage.tempo]);
+
+  // ── CRONÔMETRO: atualizar a cada segundo ──
+  React.useEffect(() => {
+    if (!accidentStartTime) return;
+    const updateElapsed = () => {
+      const elapsed = Math.floor((Date.now() - accidentStartTime) / 1000);
+      setElapsedSeconds(elapsed);
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [accidentStartTime]);
+
+  // Formatar tempo decorrido
+  const formatElapsed = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${String(m).padStart(2, '0')}min`;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  // Janela terapêutica em minutos por tipo
+  const getWindowMinutes = (type) => ({
+    "Botrópico": 360, "Crotálico": 360, "Elapídico": 180,
+    "Escorpiônico": 180, "Fonêutrico": 360, "Loxoscélico": 2160,
+    "Lonômico": 720, "Aracnídico": 360
+  }[type] || 360);
+
+  // Status do cronômetro (cor baseada em proximidade da janela terapêutica)
+  const getTimerStatus = () => {
+    if (!specificType || specificType === "__COMPLETO__") return "safe";
+    const windowMin = getWindowMinutes(specificType);
+    const elapsedMin = elapsedSeconds / 60;
+    const pct = elapsedMin / windowMin;
+    if (pct < 0.5) return "safe";
+    if (pct < 0.8) return "warning";
+    return "danger";
+  };
+
+  const timerStatus = getTimerStatus();
+  const timerColors = {
+    safe: { bg: "#FFFFFF", border: "#168821", text: "#168821", label: "#168821" },
+    warning: { bg: "#FFFBEA", border: "#FFCD07", text: "#B58A00", label: "#8A6500" },
+    danger: { bg: "#FFF1F1", border: "#D04F4F", text: "#D04F4F", label: "#A03333" }
+  };
+
+  // Gerar ficha de transferência
+  const generateFicha = (h) => {
+    const idadeLabel = { crianca: "Criança (< 12 anos)", adulto: "Adulto (12-60 anos)", idoso: "Idoso (> 60 anos)" }[triage.idade] || "Não informado";
+    const hora = accidentStartTime ? new Date(accidentStartTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : "Não informado";
+    const tipoLabel = specificType === "__COMPLETO__" ? "Não identificado" : specificType;
+    const animalLabel = selectedAnimalData?.label || "Não identificado";
+    return {
+      tipo: tipoLabel,
+      animal: animalLabel,
+      horaPicada: hora,
+      tempoDecorrido: accidentStartTime ? formatElapsed(elapsedSeconds) : "Não informado",
+      localPicada: localPicada || "Não informado",
+      idade: idadeLabel,
+      sinais: urgencyData?.sintomas || "Ver sintomas típicos",
+      hospital: h.unidade,
+      soroIndicado: specificType === "__COMPLETO__" ? "A definir pelo médico" : `Anti-${specificType.toLowerCase()}`,
+      janela: urgencyData?.janela || "A avaliar"
+    };
+  };
+
+  // ── Computar resultados ──
+  React.useEffect(() => {
+    if (step === 3 && userLocation && specificType) {
+      let sorted;
+      if (specificType === "__COMPLETO__") {
+        sorted = HOSPITALS_DATA
+          .map(h => ({ ...h, distance: haversine(userLocation.lat, userLocation.lng, h.lat, h.lng), cobertura: h.atendimentos.length }))
+          .sort((a, b) => b.cobertura - a.cobertura || a.distance - b.distance)
+          .slice(0, 8);
+      } else {
+        sorted = HOSPITALS_DATA
+          .filter(h => h.atendimentos.includes(specificType))
+          .map(h => ({ ...h, distance: haversine(userLocation.lat, userLocation.lng, h.lat, h.lng) }))
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, 8);
+      }
+      setResults(sorted);
+    }
+  }, [step, userLocation, specificType]);
+
+  // Função para ir direto aos resultados (pula step 2 se GPS já obtido)
+  const goToResults = (type) => {
+    setSpecificType(type);
+    if (userLocation) {
+      setStep(3);
+    } else {
+      setStep(2);
+    }
+  };
+
+  const requestLocation = () => {
+    setLoadingGPS(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGpsStatus("ok"); setLoadingGPS(false); setStep(3); },
+        () => { setUserLocation({ lat: -24.9573, lng: -53.4550 }); setLocationError(true); setGpsStatus("fallback"); setLoadingGPS(false); setStep(3); },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setUserLocation({ lat: -24.9573, lng: -53.4550 }); setLocationError(true); setGpsStatus("fallback"); setLoadingGPS(false); setStep(3);
+    }
+  };
+
+  const handleNavigate = (h) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(h.endereco + ', ' + h.municipio + ' - ' + h.estado)}`;
+    setNavAlert({ hospital: h, url });
+  };
+
+  const selectedAnimalData = ANIMAL_TYPES.find(a => a.id === animalType);
+  const urgencyData = specificType && specificType !== "__COMPLETO__" ? URGENCY_INFO[specificType] : null;
+
+  // Avaliação de gravidade baseada na triagem
+  const getSeverityLevel = () => {
+    if (!urgencyData) return null;
+    let level = "moderado";
+    if (urgencyData.urgencia === "critica") level = "grave";
+    else if (urgencyData.urgencia === "alta") level = "moderado";
+    if (triage.idade === "crianca" || triage.idade === "idoso") level = "grave";
+    if (triage.tempo === "mais6h" && urgencyData.urgencia === "critica") level = "critico";
+    return level;
+  };
+
+  const severityLevel = getSeverityLevel();
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#F8F8F8",
+      fontFamily: "'Segoe UI', -apple-system, sans-serif",
+      color: "#1F1F1F", position: "relative", overflow: "hidden"
+    }}>
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, height: "3px",
+        background: step >= 1 ? "linear-gradient(90deg, #0077C8, #F6EB61, #0077C8)" : "transparent",
+        animation: step >= 1 ? "pulse-bar 2s ease-in-out infinite" : "none", zIndex: 60
+      }}/>
+
+      <style>{`
+        @keyframes pulse-bar { 0%,100%{opacity:0.4} 50%{opacity:1} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes pulseGlow { 0%,100%{box-shadow:0 0 8px rgba(220,38,38,0.3)} 50%{box-shadow:0 0 20px rgba(220,38,38,0.6)} }
+        .card-hover { transition: all 0.2s ease; }
+        .card-hover:hover { border-color: #1351B4 !important; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(19,81,180,0.15) !important; }
+        .card-hover:active { transform: scale(0.98); }
+        .animal-btn { transition: all 0.15s ease; }
+        .animal-btn:hover { transform: scale(1.03); }
+        .animal-btn:active { transform: scale(0.97); }
+        .triage-btn { transition: all 0.15s ease; cursor: pointer; }
+        .triage-btn:active { transform: scale(0.95); }
+      `}</style>
+
+      {/* ═══ BARRA DE EMERGÊNCIA PERSISTENTE ═══ */}
+      {/* Faixa institucional superior estilo Gov.br */}
+      <div style={{ background: "#0C326F", padding: "6px 16px", borderBottom: "1px solid rgba(255,255,255,0.10)" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Programa de Saúde Pública</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.60)", fontWeight: 500 }}>Protótipo conceitual</span>
+        </div>
+      </div>
+      {/* Header principal azul Gov.br */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 50,
+        background: "#1351B4", padding: "14px 16px 16px",
+        boxShadow: "0 2px 8px rgba(12,50,111,0.25)"
+      }}>
+        <div style={{ maxWidth: 480, margin: "0 auto" }}>
+          {/* Linha 1: Marca institucional */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <div style={{
+              width: 44, height: 44, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.15)", borderRadius: 10
+            }} dangerouslySetInnerHTML={{__html: `<svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="14" fill="#FFFFFF"/><g transform="translate(18 18)"><path d="M22 0h20v22h22v20H42v22H22V42H0V22h22z" fill="#168821"/><path d="M32 0h10v22h22v20H42v22H32z" fill="#1351B4"/><path d="M32 16 Q22 30 22 38 Q22 48 32 48 Q42 48 42 38 Q42 30 32 16 Z" fill="#FFFFFF"/></g></svg>`}}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, letterSpacing: -0.3 }}>Mais Soro</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.80)", marginTop: 2, fontWeight: 500 }}>Mais Soro. Mais Vida.</div>
+            </div>
+          </div>
+          {/* Linha 2: Contatos de emergência */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+            <a href="tel:192" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+              background: "#FFFFFF", borderRadius: 6, padding: "8px 6px", textDecoration: "none",
+              color: "#D04F4F", fontWeight: 700, fontSize: 12
+            }}>SAMU <strong>192</strong></a>
+            <a href="tel:08007226001" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+              background: "#FFCD07", borderRadius: 6, padding: "8px 6px", textDecoration: "none",
+              color: "#0C326F", fontWeight: 700, fontSize: 12
+            }}>CIATox <strong>0800</strong></a>
+            <a href="tel:193" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+              background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.40)",
+              borderRadius: 6, padding: "7px 6px", textDecoration: "none",
+              color: "#FFFFFF", fontWeight: 700, fontSize: 12
+            }}>Bombeiros <strong>193</strong></a>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ ALERTA DE NAVEGAÇÃO (MODAL) ═══ */}
+      {navAlert && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 20, animation: "fadeIn 0.2s ease-out"
+        }} onClick={() => setNavAlert(null)}>
+          <div style={{
+            background: "#1E2436", borderRadius: 20, padding: 24,
+            maxWidth: 380, width: "100%", border: "1px solid rgba(255,255,255,0.10)",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            animation: "fadeUp 0.3s ease-out"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 8px", color: "#fff" }}>
+                Confirme antes de ir!
+              </h3>
+              <p style={{ fontSize: 14, color: "#B0B8C8", lineHeight: 1.6, margin: 0 }}>
+                Ligue para o <strong style={{ color: "#fff" }}>{navAlert.hospital.unidade}</strong> e confirme a disponibilidade do soro antes de se deslocar.
+              </p>
+            </div>
+
+            <div style={{
+              background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)",
+              borderRadius: 12, padding: 14, marginBottom: 16, textAlign: "center"
+            }}>
+              <div style={{ fontSize: 12, color: "#A8B0BF", marginBottom: 4 }}>Telefone do hospital</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#fca5a5", letterSpacing: 1 }}>{navAlert.hospital.telefone}</div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <a href={`tel:${navAlert.hospital.telefone.replace(/[^0-9]/g, "")}`} style={{
+                padding: "14px", borderRadius: 12, textAlign: "center",
+                background: "#dc2626", color: "#fff", fontWeight: 700, fontSize: 15,
+                textDecoration: "none", animation: "pulseGlow 2s ease-in-out infinite"
+              }}>
+                📞 Ligar para o hospital primeiro
+              </a>
+              <a href={navAlert.url} target="_blank" rel="noopener noreferrer" onClick={() => setNavAlert(null)} style={{
+                padding: "14px", borderRadius: 12, textAlign: "center",
+                background: "rgba(255,255,255,0.08)", color: "#fff", fontWeight: 700, fontSize: 14,
+                textDecoration: "none", border: "1px solid rgba(255,255,255,0.15)"
+              }}>
+                🗺️ Já confirmei, navegar agora
+              </a>
+              <button onClick={() => setNavAlert(null)} style={{
+                padding: "10px", background: "none", border: "none",
+                color: "#9BA4B5", fontSize: 13, cursor: "pointer"
+              }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL FICHA DE TRANSFERÊNCIA ═══ */}
+      {fichaModal && (() => {
+        const ficha = generateFicha(fichaModal);
+        const fichaText = `📋 FICHA DE SUPORTE - MAIS SORO
+━━━━━━━━━━━━━━━━━━━━━━━
+🐍 Tipo de acidente: ${ficha.tipo}
+Animal: ${ficha.animal}
+
+⏱ Hora da picada: ${ficha.horaPicada}
+Tempo decorrido: ${ficha.tempoDecorrido}
+Janela terapêutica: ${ficha.janela}
+
+📍 Local da picada: ${ficha.localPicada}
+👤 Vítima: ${ficha.idade}
+
+Sintomas possíveis: ${ficha.sinais}
+
+💉 Soro indicado: ${ficha.soroIndicado}
+🏥 Destino: ${ficha.hospital}
+━━━━━━━━━━━━━━━━━━━━━━━
+Ficha gerada por Mais Soro
+Protótipo Socorro Peçonhentos`;
+        return (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16, animation: "fadeIn 0.2s ease-out"
+          }} onClick={() => setFichaModal(null)}>
+            <div style={{
+              background: "#0F2534", borderRadius: 20, padding: 0,
+              maxWidth: 420, width: "100%", maxHeight: "90vh", overflow: "auto",
+              border: "1.5px solid rgba(0,150,57,0.35)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+              animation: "fadeUp 0.3s ease-out"
+            }} onClick={e => e.stopPropagation()}>
+              
+              {/* Header verde PR */}
+              <div style={{
+                background: "linear-gradient(135deg, #009639, #006B2B)",
+                padding: "18px 22px", borderRadius: "20px 20px 0 0",
+                display: "flex", alignItems: "center", justifyContent: "space-between"
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Ficha de Suporte APH</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginTop: 2 }}>📋 Mostrar ao médico</div>
+                </div>
+                <button onClick={() => setFichaModal(null)} style={{
+                  background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
+                  width: 32, height: 32, borderRadius: 10, fontSize: 18, cursor: "pointer"
+                }}>✕</button>
+              </div>
+
+              {/* Corpo da ficha */}
+              <div style={{ padding: "20px 22px", color: "#DEE2EA", fontSize: 14, lineHeight: 1.6 }}>
+                
+                <div style={{ marginBottom: 16, padding: "12px 14px", background: "rgba(0,119,200,0.10)", borderLeft: "3px solid #0077C8", borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, color: "#5EB3E6", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Tipo de Envenenamento</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{ficha.tipo}</div>
+                  <div style={{ fontSize: 12, color: "#A8B0BF", marginTop: 2 }}>{ficha.animal}</div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                  <div style={{ padding: 10, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: "#7A8394", fontWeight: 600, textTransform: "uppercase" }}>⏱ Hora da picada</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginTop: 2 }}>{ficha.horaPicada}</div>
+                  </div>
+                  <div style={{ padding: 10, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
+                    <div style={{ fontSize: 10, color: "#7A8394", fontWeight: 600, textTransform: "uppercase" }}>Decorrido</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: timerColors[timerStatus].text, marginTop: 2 }}>{ficha.tempoDecorrido}</div>
+                  </div>
+                </div>
+
+                <div style={{ padding: "10px 12px", background: "rgba(246,235,97,0.10)", borderLeft: "3px solid #F6EB61", borderRadius: 8, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#FDE047", fontWeight: 600, textTransform: "uppercase" }}>Janela terapêutica</div>
+                  <div style={{ fontSize: 13, color: "#DEE2EA", marginTop: 2 }}>{ficha.janela}</div>
+                </div>
+
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "#7A8394", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>👤 Vítima</div>
+                  <div style={{ fontSize: 14, color: "#fff" }}>{ficha.idade}</div>
+                </div>
+
+                {/* Campo local da picada editável */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "#7A8394", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>📍 Local da picada no corpo</div>
+                  <input
+                    type="text"
+                    value={localPicada}
+                    onChange={(e) => setLocalPicada(e.target.value)}
+                    placeholder="ex: tornozelo direito, mão esquerda..."
+                    style={{
+                      width: "100%", padding: "10px 12px", borderRadius: 8,
+                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
+                      color: "#fff", fontSize: 13, fontFamily: "inherit", boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 14, padding: "10px 12px", background: "rgba(218,41,28,0.08)", borderLeft: "3px solid #DA291C", borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: "#FCA5A5", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>⚠ Sintomas típicos a observar</div>
+                  <div style={{ fontSize: 12, color: "#DEE2EA", lineHeight: 1.5 }}>{ficha.sinais}</div>
+                </div>
+
+                <div style={{ padding: "12px 14px", background: "rgba(0,150,57,0.12)", borderRadius: 10, border: "1px solid rgba(0,150,57,0.3)" }}>
+                  <div style={{ fontSize: 10, color: "#86EFAC", fontWeight: 700, textTransform: "uppercase" }}>💉 Conduta sugerida</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginTop: 4 }}>{ficha.soroIndicado}</div>
+                  <div style={{ fontSize: 11, color: "#A8B0BF", marginTop: 4 }}>Destino: {ficha.hospital}</div>
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div style={{ padding: "0 22px 22px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <a href={`https://wa.me/?text=${encodeURIComponent(fichaText)}`} target="_blank" rel="noopener noreferrer" style={{
+                  padding: "14px", borderRadius: 12, textAlign: "center",
+                  background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 14,
+                  textDecoration: "none"
+                }}>
+                  📱 Enviar via WhatsApp ao hospital
+                </a>
+                <button onClick={() => { navigator.clipboard?.writeText(fichaText); }} style={{
+                  padding: "12px", borderRadius: 12, textAlign: "center",
+                  background: "rgba(0,119,200,0.15)", color: "#5EB3E6", fontWeight: 700, fontSize: 13,
+                  border: "1px solid rgba(0,119,200,0.35)", cursor: "pointer"
+                }}>
+                  📋 Copiar texto da ficha
+                </button>
+                <div style={{ fontSize: 10, color: "#7A8394", textAlign: "center", marginTop: 4, lineHeight: 1.5 }}>
+                  Mostre esta tela ao médico na chegada ao hospital<br/>
+                  ou envie previamente via WhatsApp
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div ref={topRef} style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
+
+        {/* Header */}
+        <div style={{ textAlign: "center", padding: "24px 0 16px", animation: "fadeUp 0.4s ease-out" }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: "#1351B4", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Bem-vindo</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.2, color: "#0C326F", letterSpacing: -0.3 }}>Encontre o soro certo,<br/>no tempo certo</h2>
+          <p style={{ fontSize: 13, color: "#636363", marginTop: 10, lineHeight: 1.5 }}>Hospital mais próximo com soro específico para acidentes com animais peçonhentos</p>
+          <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 16 }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: step > i ? 32 : 8, height: 4, borderRadius: 2, background: step > i ? "#1351B4" : step === i ? "#FFCD07" : "#DEDEDE", transition: "all 0.3s ease" }}/>
+            ))}
+          </div>
+        </div>
+
+        {/* ═══ STEP 0: Animal ═══ */}
+        {step === 0 && (
+          <div style={{ animation: "fadeUp 0.4s ease-out" }}>
+            <div style={{ background: "#FFFFFF", border: "1px solid #DEDEDE", borderRadius: 12, padding: 16, marginBottom: 20, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <div style={{ fontSize: 14, color: "#0C326F", fontWeight: 700 }}>O que causou o acidente?</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {ANIMAL_TYPES.map((animal, i) => (
+                <button key={animal.id} className="animal-btn" onClick={() => { setAnimalType(animal.id); setStep(1); }} style={{
+                  background: "#FFFFFF", border: "1.5px solid #DEDEDE",
+                  borderRadius: 12, padding: "24px 12px", cursor: "pointer", color: "#1F1F1F", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                  animation: `fadeUp ${0.3 + i*0.1}s ease-out`
+                }}>
+                  <span style={{ fontSize: 40 }}>{animal.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{animal.label}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => { goToResults("__COMPLETO__"); }} style={{
+              width: "100%", marginTop: 16, padding: "14px",
+              background: "#FFCD07", border: "none",
+              borderRadius: 12, color: "#0C326F", fontWeight: 800, fontSize: 14,
+              cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase", boxShadow: "0 2px 8px rgba(255,205,7,0.30)"
+            }}>⚡ Não sei, buscar hospital mais completo</button>
+
+            {/* GPS Status */}
+            <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#7A8394", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: gpsStatus === "ok" ? "#22c55e" : gpsStatus === "fallback" ? "#f59e0b" : "#9BA4B5",
+                animation: gpsStatus === "loading" ? "pulse-bar 1.5s ease-in-out infinite" : "none"
+              }}/>
+              {gpsStatus === "ok" && "📍 Localização obtida"}
+              {gpsStatus === "loading" && "Obtendo localização..."}
+              {gpsStatus === "fallback" && "GPS indisponível, usando Cascavel-PR"}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 1: Subtype ═══ */}
+        {step === 1 && selectedAnimalData && (
+          <div style={{ animation: "fadeUp 0.3s ease-out" }}>
+            <button onClick={() => { setStep(0); setAnimalType(null); }} style={{ background: "none", border: "none", color: "#1351B4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>← Voltar</button>
+            <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 20, textAlign: "center", marginBottom: 20, border: "1px solid #DEDEDE", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <span style={{ fontSize: 48 }}>{selectedAnimalData.icon}</span>
+              <h2 style={{ fontSize: 18, marginTop: 8, marginBottom: 4 }}>{selectedAnimalData.label}</h2>
+              <p style={{ fontSize: 13, color: "#636363" }}>Qual se parece mais com o animal?</p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {selectedAnimalData.subtypes.map((sub, i) => (
+                <button key={sub.id} className="card-hover" onClick={() => { goToResults(sub.id); }} style={{
+                  background: "#FFFFFF", border: "1px solid #DEDEDE", borderRadius: 12, padding: "16px 18px",
+                  cursor: "pointer", color: "#1F1F1F", textAlign: "left", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex",
+                  alignItems: "center", gap: 14, animation: `fadeUp ${0.2 + i*0.1}s ease-out`
+                }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg, ${sub.color}, ${sub.color}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff" }}>{sub.label[0]}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{sub.label}</div>
+                    <div style={{ fontSize: 12, color: "#636363", marginTop: 2 }}>{sub.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 2: Location ═══ */}
+        {step === 2 && (
+          <div style={{ animation: "fadeUp 0.3s ease-out" }}>
+            <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#1351B4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>← Voltar</button>
+            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 20, padding: 32, textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px", background: "rgba(220,38,38,0.10)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>📍</div>
+              <h2 style={{ fontSize: 20, marginBottom: 8 }}>Localização</h2>
+              <p style={{ fontSize: 13, color: "#A8B0BF", marginBottom: 24, lineHeight: 1.5 }}>
+                Precisamos da sua localização para encontrar o hospital mais próximo {specificType === "__COMPLETO__" ? <strong style={{ color: "#f59e0b" }}>com atendimento mais completo</strong> : <>com soro <strong style={{ color: "#f59e0b" }}>{specificType}</strong></>}
+              </p>
+              <button onClick={requestLocation} disabled={loadingGPS} style={{
+                width: "100%", padding: "16px 24px",
+                background: loadingGPS ? "#2D3548" : "linear-gradient(135deg, #dc2626, #b91c1c)",
+                border: "none", borderRadius: 14, color: "#fff", fontWeight: 700,
+                fontSize: 16, cursor: loadingGPS ? "default" : "pointer",
+                boxShadow: loadingGPS ? "none" : "0 4px 24px rgba(220,38,38,0.4)"
+              }}>
+                {loadingGPS ? (
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                    <span style={{ width: 18, height: 18, border: "2px solid #fff4", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }}/>
+                    Obtendo GPS...
+                  </span>
+                ) : "Compartilhar Localização"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 3: Results ═══ */}
+        {step === 3 && (
+          <div style={{ animation: "fadeUp 0.3s ease-out" }}>
+            <button onClick={() => { setStep(0); setAnimalType(null); setSpecificType(null); setResults([]); setLocationError(false); setTriage({ idade: null, tempo: null }); }} style={{ background: "none", border: "none", color: "#1351B4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 12, padding: 0 }}>← Nova busca</button>
+
+            {locationError && (
+              <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 12, color: "#fbbf24" }}>
+                GPS indisponível. Mostrando resultados a partir de Cascavel-PR como referência.
+              </div>
+            )}
+
+            <div style={{ background: "#FFFFFF", border: "1.5px solid #1351B4", borderRadius: 12, padding: 16, marginBottom: 16, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <div style={{ fontSize: 12, color: "#636363", marginBottom: 4, fontWeight: 600 }}>{specificType === "__COMPLETO__" ? "Critério de busca" : "Soro necessário"}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: specificType === "__COMPLETO__" ? "#0C326F" : "#1351B4" }}>{specificType === "__COMPLETO__" ? "Atendimento Completo" : specificType}</div>
+              <div style={{ fontSize: 11, color: "#888888", marginTop: 6 }}>{results.length} hospitais encontrados na região</div>
+            </div>
+
+            {/* ── CRONÔMETRO DE TEMPO DESDE A PICADA ── */}
+            {accidentStartTime && specificType !== "__COMPLETO__" && (
+              <div style={{
+                background: timerColors[timerStatus].bg,
+                border: `1.5px solid ${timerColors[timerStatus].border}`,
+                borderRadius: 14, padding: "14px 18px", marginBottom: 16,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                animation: timerStatus === "danger" ? "pulse-bar 1.5s ease-in-out infinite" : "fadeUp 0.3s ease-out"
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, color: timerColors[timerStatus].label, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 2 }}>
+                    ⏱ Tempo desde o acidente
+                  </div>
+                  <div style={{ fontSize: 11, color: "#636363", fontWeight: 500 }}>
+                    Janela: {urgencyData?.janela || "N/D"}
+                  </div>
+                </div>
+                <div style={{
+                  fontSize: 26, fontWeight: 900, color: timerColors[timerStatus].text,
+                  fontVariantNumeric: "tabular-nums", letterSpacing: 0.5
+                }}>
+                  {formatElapsed(elapsedSeconds)}
+                </div>
+              </div>
+            )}
+
+            {/* ── CARD DE URGÊNCIA CLÍNICA ── */}
+            {urgencyData && showUrgency && (() => {
+              const urgColors = {
+                critica: { bg: "#FFF1F1", border: "#D04F4F", title: "#A03333", accent: "#D04F4F" },
+                alta:    { bg: "#FFF8E8", border: "#FFCD07", title: "#8A6500", accent: "#B58A00" },
+                moderada:{ bg: "#EBF3FF", border: "#1351B4", title: "#0C326F", accent: "#1351B4" }
+              }[urgencyData.urgencia] || { bg: "#FFFFFF", border: "#DEDEDE", title: "#0C326F", accent: "#1351B4" };
+              return (
+              <div style={{
+                background: urgColors.bg, border: `1.5px solid ${urgColors.border}`,
+                borderRadius: 12, padding: 18, marginBottom: 16,
+                animation: "fadeUp 0.3s ease-out", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>{urgencyData.urgencia === "critica" ? "🔴" : urgencyData.urgencia === "alta" ? "🟠" : "🔵"}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: urgColors.title, letterSpacing: 0.5 }}>
+                      {urgencyData.urgencia === "critica" ? "URGÊNCIA CRÍTICA" : urgencyData.urgencia === "alta" ? "URGÊNCIA ALTA" : "URGÊNCIA MODERADA"}
+                    </span>
+                  </div>
+                  <button onClick={() => setShowUrgency(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: 18, padding: 4 }}>✕</button>
+                </div>
+
+                <div style={{ fontSize: 13, color: "#333333", lineHeight: 1.6 }}>
+                  <div style={{ marginBottom: 12, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: `1px solid ${urgColors.border}66` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: urgColors.accent, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>⏱ Janela terapêutica</div>
+                    <div style={{ color: "#1F1F1F", fontWeight: 600 }}>{urgencyData.janela}</div>
+                  </div>
+                  <div style={{ marginBottom: 10, padding: "0 2px" }}>
+                    <strong style={{ color: "#0C326F" }}>Sintomas esperados: </strong>
+                    <span style={{ color: "#333333" }}>{urgencyData.sintomas}</span>
+                  </div>
+                  <div style={{ marginBottom: 10, padding: "10px 12px", background: "#FFF1F1", borderRadius: 8, borderLeft: "3px solid #D04F4F" }}>
+                    <strong style={{ color: "#A03333" }}>⚠ Crianças e idosos: </strong>
+                    <span style={{ color: "#1F1F1F" }}>{urgencyData.riscoCrianca}</span>
+                  </div>
+                  <div style={{ marginBottom: 8, padding: "0 2px" }}>
+                    <strong style={{ color: "#0C326F" }}>Local da picada: </strong>
+                    <span style={{ color: "#333333" }}>{urgencyData.riscoLocal}</span>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 14, padding: "12px 14px", background: "#FFFFFF", borderRadius: 10, border: "1px solid #DEDEDE" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#1351B4", marginBottom: 5, textTransform: "uppercase", letterSpacing: 0.5 }}>📋 O que informar ao hospital</div>
+                  <div style={{ fontSize: 13, color: "#333333", lineHeight: 1.6 }}>{urgencyData.oQueDizer}</div>
+                </div>
+              </div>
+              );
+            })()}
+
+            {/* ── MINITRIAGEM RÁPIDA ── */}
+            {urgencyData && (
+              <div style={{ background: "#FFFFFF", border: "1px solid #DEDEDE", borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0C326F", marginBottom: 12 }}>🩺 Triagem rápida (informe ao hospital)</div>
+                
+                {/* Idade */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: "#636363", marginBottom: 8, fontWeight: 600 }}>Idade da vítima:</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[
+                      { id: "crianca", label: "Criança (< 12)", color: "#dc2626" },
+                      { id: "adulto", label: "Adulto (12-60)", color: "#3b82f6" },
+                      { id: "idoso", label: "Idoso (> 60)", color: "#f59e0b" },
+                    ].map(opt => (
+                      <button key={opt.id} className="triage-btn" onClick={() => setTriage(t => ({ ...t, idade: opt.id }))} style={{
+                        padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        background: triage.idade === opt.id ? `${opt.color}25` : "rgba(255,255,255,0.04)",
+                        border: `1.5px solid ${triage.idade === opt.id ? opt.color : "rgba(255,255,255,0.08)"}`,
+                        color: triage.idade === opt.id ? opt.color : "#9BA4B5"
+                      }}>{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tempo desde o acidente */}
+                <div>
+                  <div style={{ fontSize: 12, color: "#636363", marginBottom: 8, fontWeight: 600 }}>Tempo desde o acidente:</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[
+                      { id: "menos1h", label: "< 1 hora" },
+                      { id: "1a3h", label: "1 a 3 horas" },
+                      { id: "3a6h", label: "3 a 6 horas" },
+                      { id: "mais6h", label: "> 6 horas" },
+                    ].map(opt => (
+                      <button key={opt.id} className="triage-btn" onClick={() => setTriage(t => ({ ...t, tempo: opt.id }))} style={{
+                        padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        background: triage.tempo === opt.id ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)",
+                        border: `1.5px solid ${triage.tempo === opt.id ? "#f59e0b" : "rgba(255,255,255,0.08)"}`,
+                        color: triage.tempo === opt.id ? "#fbbf24" : "#9BA4B5"
+                      }}>{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resultado da triagem */}
+                {(triage.idade || triage.tempo) && (
+                  <div style={{
+                    marginTop: 12, padding: "10px 14px", borderRadius: 10,
+                    background: severityLevel === "critico" || severityLevel === "grave"
+                      ? "rgba(220,38,38,0.12)" : "rgba(245,158,11,0.10)",
+                    border: `1px solid ${severityLevel === "critico" || severityLevel === "grave" ? "rgba(220,38,38,0.3)" : "rgba(245,158,11,0.25)"}`,
+                    animation: "fadeUp 0.2s ease-out"
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: severityLevel === "critico" || severityLevel === "grave" ? "#fca5a5" : "#fbbf24" }}>
+                      {severityLevel === "critico" ? "⚠ SITUAÇÃO CRÍTICA: Desloque-se imediatamente" :
+                       severityLevel === "grave" ? "⚠ RISCO ELEVADO: Priorize rapidez no atendimento" :
+                       "ℹ Atendimento recomendado com agilidade"}
+                    </div>
+                    {triage.idade === "crianca" && (
+                      <div style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>
+                        Crianças têm maior risco de complicações graves. Informe o peso da criança ao hospital.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Alerta SAMU */}
+            <div style={{
+              background: "linear-gradient(135deg, rgba(220,38,38,0.15), rgba(185,28,28,0.08))",
+              border: "1px solid rgba(220,38,38,0.3)", borderRadius: 14, padding: 16,
+              marginBottom: 20, display: "flex", alignItems: "center", gap: 14
+            }}>
+              <div style={{ fontSize: 28, animation: "shake 1s ease-in-out infinite" }}>🚑</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#fca5a5" }}>Ligue SAMU: 192</div>
+                <div style={{ fontSize: 12, color: "#A8B0BF", marginTop: 2 }}>Confirme estoque de soro antes de se deslocar</div>
+              </div>
+              <a href="tel:192" style={{ marginLeft: "auto", background: "#dc2626", color: "#fff", borderRadius: 10, padding: "10px 16px", fontWeight: 700, fontSize: 13, textDecoration: "none", flexShrink: 0 }}>Ligar</a>
+            </div>
+
+            {/* Hospital list */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {results.map((h, i) => (
+                <div key={i} className="card-hover" style={{
+                  background: "#FFFFFF", border: i === 0 ? "2px solid #1351B4" : "1px solid #DEDEDE", boxShadow: i === 0 ? "0 4px 12px rgba(19,81,180,0.15)" : "0 1px 3px rgba(0,0,0,0.06)",
+                  borderRadius: 16, padding: 0, overflow: "hidden",
+                  animation: `fadeUp ${0.2 + i*0.06}s ease-out`, cursor: "pointer"
+                }} onClick={() => setExpanded(expanded === i ? null : i)}>
+                  <div style={{ padding: "16px 18px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1 }}>
+                        {i === 0 && (
+                          <div style={{
+                            display: "inline-block", fontSize: 10, fontWeight: 800,
+                            background: specificType === "__COMPLETO__" ? "#FFCD07" : "#1351B4",
+                            color: specificType === "__COMPLETO__" ? "#0C326F" : "#fff", padding: "3px 10px", borderRadius: 4, marginBottom: 6,
+                            letterSpacing: 1, textTransform: "uppercase"
+                          }}>{specificType === "__COMPLETO__" ? "Mais completo" : "Mais próximo"}</div>
+                        )}
+                        <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3, color: "#1F1F1F" }}>{h.unidade}</div>
+                        <div style={{ fontSize: 12, color: "#636363", marginTop: 4 }}>
+                          {h.municipio} - {h.estado}
+                          {specificType === "__COMPLETO__" && h.cobertura && (
+                            <span style={{ marginLeft: 8, color: "#f59e0b", fontWeight: 600 }}>{h.cobertura} soros</span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: i === 0 ? "#1351B4" : "#0C326F" }}>
+                          {h.distance.toFixed(0)}
+                          <span style={{ fontSize: 11, fontWeight: 400, color: "#888888" }}> km</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {expanded === i && (
+                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.08)", animation: "fadeUp 0.2s ease-out" }}>
+                        <div style={{ fontSize: 12, color: "#B0B8C8", marginBottom: 8 }}>📍 {h.endereco}</div>
+                        <div style={{ fontSize: 12, color: "#B0B8C8", marginBottom: 12 }}>📞 {h.telefone}</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 14 }}>
+                          {h.atendimentos.map(a => {
+                            const isMatch = specificType !== "__COMPLETO__" && a === specificType;
+                            const isCompleto = specificType === "__COMPLETO__";
+                            return (
+                              <span key={a} style={{
+                                fontSize: 10, padding: "3px 7px", borderRadius: 6,
+                                background: isMatch ? "rgba(220,38,38,0.2)" : isCompleto ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.08)",
+                                color: isMatch ? "#fca5a5" : isCompleto ? "#fbbf24" : "#9BA4B5",
+                                border: isMatch ? "1px solid rgba(220,38,38,0.3)" : "1px solid transparent",
+                                fontWeight: isMatch || isCompleto ? 700 : 400
+                              }}>{a}</span>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                          <a href={`tel:${h.telefone.replace(/[^0-9]/g, "")}`} style={{
+                            flex: 1, padding: "12px", borderRadius: 10, textAlign: "center",
+                            background: "#D04F4F", color: "#fff", fontWeight: 700, fontSize: 13, textDecoration: "none"
+                          }}>📞 Ligar</a>
+                          <button onClick={(e) => { e.stopPropagation(); handleNavigate(h); }} style={{
+                            flex: 1, padding: "12px", borderRadius: 10, textAlign: "center",
+                            background: "#1351B4", color: "#fff", fontWeight: 700,
+                            fontSize: 13, border: "none", cursor: "pointer"
+                          }}>🗺️ Navegar</button>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setFichaModal(h); }} style={{
+                          width: "100%", padding: "12px", borderRadius: 10, textAlign: "center",
+                          background: "#168821", color: "#fff", fontWeight: 700,
+                          fontSize: 13, border: "none", cursor: "pointer"
+                        }}>📋 Gerar Ficha para o Hospital</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* First aid tips */}
+            <div style={{ marginTop: 24, background: "#FFFFFF", border: "1.5px solid #FFCD07", borderRadius: 12, padding: 18, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: "#B58A00", marginTop: 0, marginBottom: 12 }}>⚠ Primeiros Socorros</h3>
+              <div style={{ fontSize: 12, color: "#333333", lineHeight: 1.7 }}>
+                <div style={{ marginBottom: 8 }}>✓ <strong style={{ color: "#0C326F" }}>Mantenha a calma</strong> e imobilize o membro afetado</div>
+                <div style={{ marginBottom: 8 }}>✓ <strong style={{ color: "#0C326F" }}>Lave com água e sabão</strong> o local da picada</div>
+                <div style={{ marginBottom: 8 }}>✓ <strong style={{ color: "#0C326F" }}>NÃO faça torniquete</strong>, não corte, não chupe o veneno</div>
+                <div style={{ marginBottom: 8 }}>✓ <strong style={{ color: "#0C326F" }}>Se possível, fotografe</strong> o animal para identificação</div>
+                <div>✓ <strong style={{ color: "#0C326F" }}>Vá ao hospital mais rápido possível</strong></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ RODAPÉ INSTITUCIONAL ═══ */}
+        <div style={{ marginTop: 48 }}>
+          {/* Fonte dos dados */}
+          <div style={{ padding: "20px 0 16px", borderTop: "1px solid #DEDEDE", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: "#1351B4", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Fonte dos dados</div>
+            <div style={{ fontSize: 12, color: "#636363", lineHeight: 1.6 }}>
+              Secretarias Estaduais de Saúde do Paraná, Santa Catarina e Rio Grande do Sul<br/>
+              <span style={{ fontSize: 11, color: "#888" }}>Confirme a disponibilidade de soro por telefone antes do deslocamento</span>
+            </div>
+          </div>
+
+          {/* Assinatura institucional discreta */}
+          <div style={{
+            background: "#FFFFFF", border: "1px solid #E5E7EB",
+            borderRadius: 10, padding: "20px 22px", marginTop: 12
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #F1F3F4" }}>
+              <div style={{
+                width: 40, height: 40, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center"
+              }} dangerouslySetInnerHTML={{__html: `<svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="14" fill="#F8F8F8"/><g transform="translate(18 18)"><path d="M22 0h20v22h22v20H42v22H22V42H0V22h22z" fill="#168821"/><path d="M32 0h10v22h22v20H42v22H32z" fill="#1351B4"/><path d="M32 16 Q22 30 22 38 Q22 48 32 48 Q42 48 42 38 Q42 30 32 16 Z" fill="#FFFFFF"/></g></svg>`}}/>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#0C326F", lineHeight: 1.1 }}>Mais Soro</div>
+                <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>Protótipo conceitual de saúde pública</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 10, color: "#888", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Concepção e desenvolvimento</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#1F1F1F", marginBottom: 2 }}>Anderson Pires</div>
+            <div style={{ fontSize: 11, color: "#636363", marginBottom: 14 }}>PMO Sênior e pesquisador independente</div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <a href="https://wa.me/5541995547920" target="_blank" rel="noopener noreferrer" style={{
+                flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
+                borderRadius: 6, padding: "8px 10px", textDecoration: "none",
+                color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
+              }}>(41) 99554-7920</a>
+              <a href="https://www.linkedin.com/in/andersonpires" target="_blank" rel="noopener noreferrer" style={{
+                flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
+                borderRadius: 6, padding: "8px 10px", textDecoration: "none",
+                color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
+              }}>LinkedIn</a>
+              <a href="https://www.instagram.com/andersonpires.me/" target="_blank" rel="noopener noreferrer" style={{
+                flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
+                borderRadius: 6, padding: "8px 10px", textDecoration: "none",
+                color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
+              }}>Instagram</a>
+            </div>
+          </div>
+
+          {/* Copyright e direitos reservados */}
+          <div style={{ textAlign: "center", marginTop: 20, paddingBottom: 8, fontSize: 10, color: "#888", lineHeight: 1.7 }}>
+            © 2026 Mais Soro, Anderson Pires. Todos os direitos reservados.<br/>
+            Marca e conteúdo protegidos pelas Leis 9.279/96 e 9.610/98.<br/>
+            <span style={{ color: "#AAA" }}>Este aplicativo não substitui atendimento médico profissional.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<SocorroPeconhentos />);
+  </script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('SW registrado:', reg.scope))
+          .catch(err => console.log('SW falhou:', err));
+      });
+    }
+
+    // PWA Install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const banner = document.getElementById('install-banner');
+      if (banner) banner.style.display = 'flex';
+    });
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          deferredPrompt = null;
+          const banner = document.getElementById('install-banner');
+          if (banner) banner.style.display = 'none';
+        });
+      }
+    }
+    function dismissInstall() {
+      const banner = document.getElementById('install-banner');
+      if (banner) banner.style.display = 'none';
+    }
+  </script>
+
+  <!-- Install Banner -->
+  <div id="install-banner" style="
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(23,28,40,0.96); backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 16px 20px; align-items: center; gap: 12; justify-content: center;
+    animation: fadeUp 0.4s ease-out;
+  ">
+    <div style="flex:1; min-width:0;">
+      <div style="font-size:14px; font-weight:700; color:#fff; font-family:'Segoe UI',sans-serif;">Instalar Socorro Peçonhentos</div>
+      <div style="font-size:12px; color:#9BA4B5; margin-top:2px; font-family:'Segoe UI',sans-serif;">Funciona offline, acesso rápido na emergência</div>
+    </div>
+    <button onclick="installApp()" style="
+      background: linear-gradient(135deg,#dc2626,#b91c1c); border:none; color:#fff;
+      padding: 10px 20px; border-radius:10px; font-weight:700; font-size:13px;
+      cursor:pointer; white-space:nowrap; font-family:'Segoe UI',sans-serif;
+    ">Instalar</button>
+    <button onclick="dismissInstall()" style="
+      background:none; border:none; color:#666; font-size:18px; cursor:pointer; padding:4px 8px;
+    ">✕</button>
+  </div>
+</body>
+</html>

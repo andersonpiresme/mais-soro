@@ -1,0 +1,20 @@
+{
+  "name": "Mais Soro",
+  "short_name": "Mais Soro",
+  "description": "Mais Soro. Mais Vida. Encontre o hospital mais próximo com soro específico para acidentes com animais peçonhentos",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F8F8",
+  "theme_color": "#1351B4",
+  "categories": ["health", "medical"],
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%231351B4'/><g transform='translate(92 92)'><path d='M112 0h100v112h112v100H212v112H112V212H0V112h112z' fill='%23168821'/><path d='M162 0h50v112h112v100H212v112H162z' fill='%230C326F'/><path d='M162 80 Q112 150 112 190 Q112 240 162 240 Q212 240 212 190 Q212 150 162 80 Z' fill='white'/></g></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
