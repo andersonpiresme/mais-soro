@@ -29,10 +29,10 @@ const DATA_ASSETS = [
   './data/hospitais.json',
   './data/overrides.json',
   './data/municipios.json',
-  './data/icons/cobra.png',
-  './data/icons/aranha.png',
-  './data/icons/escopiao.png',
-  './data/icons/lagarta.png'
+  './data/icons/cobra.svg',
+  './data/icons/aranha.svg',
+  './data/icons/escopiao.svg',
+  './data/icons/lagarta.svg'
 ];
 
 // ═══════════════════════════════════════════════
