@@ -9,7 +9,7 @@
  * IMPORTANTE: ao alterar dados em data/*.json, troque VERSION para forçar refresh.
  */
 
-const VERSION = 'mais-soro-v3.3';
+const VERSION = 'mais-soro-v3.4';
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;

@@ -418,30 +418,45 @@ function usePWAInstall() {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════
+//   HIERARQUIA SORO ↔ ANIMAL
+//   Mapeamento clínico-toxinológico oficial (Manual de Diagnóstico
+//   e Tratamento de Acidentes por Animais Peçonhentos / MS).
+//
+//   - Cobras (4 soros monovalentes): Botrópico, Crotálico, Laquético, Elapídico
+//   - Aranhas (2 monovalentes + 1 polivalente):
+//       Loxoscélico (Loxosceles), Fonêutrico (Phoneutria),
+//       Aracnídico (SAAr — polivalente para Phoneutria, Loxosceles e Latrodectus)
+//   - Escorpiões (1): Escorpiônico (Tityus)
+//   - Lagartas (1): Lonômico (Lonomia)
+//
+//   Subtipos ordenados por frequência epidemiológica (Botrópico = mais comum).
+// ═══════════════════════════════════════════════════════════════
 const ANIMAL_TYPES = [
   {
     id: "cobra", label: "Cobra / Serpente", icon: "🐍", iconPath: "./data/icons/cobra.svg",
     subtypes: [
-      { id: "Botrópico", label: "Jararaca / Jararacuçu / Cotiara", desc: "Corpo grosso, cabeça triangular, padrão em 'V'", color: "#8B4513" },
-      { id: "Crotálico", label: "Cascavel", desc: "Chocalho na ponta da cauda, som de guizo", color: "#DAA520" },
-      { id: "Elapídico", label: "Coral Verdadeira", desc: "Anéis vermelhos, pretos e brancos/amarelos", color: "#DC143C" },
+      { id: "Botrópico", label: "Jararaca / Urutu / Jararacuçu", desc: "Corpo grosso, cabeça triangular, fosseta loreal. Inclui cotiara. Mais comum no Brasil (gênero Bothrops).", color: "#8B4513" },
+      { id: "Crotálico", label: "Cascavel", desc: "Chocalho na ponta da cauda, som de guizo (gênero Crotalus)", color: "#DAA520" },
+      { id: "Laquético", label: "Surucucu / Pico-de-jaca", desc: "Maior cobra peçonhenta das Américas — corpo grosso, cauda com escamas eriçadas. Comum na Amazônia e Mata Atlântica (gênero Lachesis).", color: "#4A5D23" },
+      { id: "Elapídico", label: "Coral-verdadeira", desc: "Anéis vermelhos, pretos e brancos/amarelos completos ao redor do corpo (gênero Micrurus)", color: "#DC143C" },
     ]
   },
   {
     id: "aranha", label: "Aranha", icon: "🕷️", iconPath: "./data/icons/aranha.svg",
     subtypes: [
-      { id: "Loxoscélico", label: "Aranha-marrom", desc: "Pequena, marrom, teia irregular em cantos escuros", color: "#8B6914" },
-      { id: "Fonêutrico", label: "Aranha-armadeira", desc: "Grande, agressiva, levanta as patas dianteiras", color: "#654321" },
-      { id: "Aracnídico", label: "Outra aranha / não sei qual", desc: "Atendimento geral para aracnídeos", color: "#555" },
+      { id: "Loxoscélico", label: "Aranha-marrom", desc: "Pequena (≈1cm), marrom, teia irregular em cantos escuros e roupas guardadas (gênero Loxosceles)", color: "#8B6914" },
+      { id: "Fonêutrico", label: "Aranha-armadeira", desc: "Grande, agressiva, levanta as patas dianteiras quando ameaçada (gênero Phoneutria)", color: "#654321" },
+      { id: "Aracnídico", label: "Viúva-negra ou aranha não identificada", desc: "Soro polivalente (SAAr) — cobre viúva-negra (Latrodectus), armadeira e marrom quando a espécie não é identificada", color: "#555" },
     ]
   },
   {
     id: "escorpiao", label: "Escorpião", icon: "🦂", iconPath: "./data/icons/escorpiao.svg",
-    subtypes: [{ id: "Escorpiônico", label: "Escorpião (Tityus)", desc: "Escorpião amarelo ou marrom", color: "#B8860B" }]
+    subtypes: [{ id: "Escorpiônico", label: "Escorpião (Tityus)", desc: "Escorpião amarelo ou marrom (gênero Tityus)", color: "#B8860B" }]
   },
   {
     id: "lagarta", label: "Lagarta / Taturana", icon: "🐛", iconPath: "./data/icons/lagarta.svg",
-    subtypes: [{ id: "Lonômico", label: "Taturana (Lonomia)", desc: "Lagarta verde com espinhos, vive em troncos", color: "#228B22" }]
+    subtypes: [{ id: "Lonômico", label: "Taturana-de-fogo (Lonomia)", desc: "Lagarta verde com espinhos urticantes, vive em grupo em troncos (gênero Lonomia)", color: "#228B22" }]
   },
 ];
 
@@ -498,6 +513,15 @@ const URGENCY_INFO = {
     riscoCrianca: "Altíssimo risco para crianças, idosos e pessoas com doença renal",
     riscoLocal: "Veneno neurotóxico age de forma sistêmica independente do local",
     oQueDizer: "Hora da picada, se há visão turva, dor muscular, cor da urina, idade e peso",
+  },
+  "Laquético": {
+    janela: "Até 6h (crítico) — síndrome vagal pode evoluir para choque",
+    urgencia: "critica",
+    corUrgencia: "#dc2626",
+    sintomas: "Dor intensa local, edema progressivo, sangramento, bradicardia, hipotensão, vômitos e diarreia (síndrome vagal)",
+    riscoCrianca: "Crianças e idosos têm maior risco de choque hipotensivo e desidratação rápida",
+    riscoLocal: "Picadas em tronco, face ou próximas a vasos tendem a quadros mais graves",
+    oQueDizer: "Hora da picada, frequência cardíaca, sinais de tontura ou hipotensão, vômitos, diarreia, idade e peso",
   },
   "Elapídico": {
     janela: "URGENTÍSSIMO: paralisia respiratória em 1 a 6h",
@@ -703,7 +727,7 @@ function SocorroPeconhentos() {
 
   // Janela terapêutica em minutos por tipo
   const getWindowMinutes = (type) => ({
-    "Botrópico": 360, "Crotálico": 360, "Elapídico": 180,
+    "Botrópico": 360, "Crotálico": 360, "Laquético": 360, "Elapídico": 180,
     "Escorpiônico": 180, "Fonêutrico": 360, "Loxoscélico": 2160,
     "Lonômico": 720, "Aracnídico": 360
   }[type] || 360);
