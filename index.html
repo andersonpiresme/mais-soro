@@ -191,12 +191,10 @@ function buscarMunicipios(municipios, query, limit) {
       if (results.length >= limit) break;
     }
   }
-  // Boost: quem começa com a query vem primeiro
   results.sort((a, b) => {
     const aStart = a[1].startsWith(q) ? 0 : 1;
     const bStart = b[1].startsWith(q) ? 0 : 1;
     if (aStart !== bStart) return aStart - bStart;
-    // Capitais primeiro
     return (b[5] || 0) - (a[5] || 0);
   });
   return results;
@@ -211,6 +209,117 @@ function detectarCidadePorCoord(municipios, lat, lng) {
     if (d < bestDist) { bestDist = d; best = m; }
   }
   return best ? { nome: best[0], uf: best[2], lat: best[3], lng: best[4], distancia: bestDist } : null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   COMPONENTE CitySearchModal — modal de busca textual
+// ═══════════════════════════════════════════════════════════════
+function CitySearchModal({ municipios, onSelect, onClose, currentCity }) {
+  const [query, setQuery] = React.useState('');
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) inputRef.current.focus();
+  }, []);
+
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const results = React.useMemo(
+    () => buscarMunicipios(municipios, query, 12),
+    [municipios, query]
+  );
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(12,50,111,0.55)",
+      zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center",
+      padding: "60px 16px 16px", animation: "fadeUp 0.18s ease-out"
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: "100%", maxWidth: 460, background: "#FFFFFF",
+        borderRadius: 14, boxShadow: "0 20px 50px rgba(0,0,0,0.30)",
+        overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "82vh"
+      }}>
+        <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid #F1F2F5" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0C326F" }}>Mudar localização</h3>
+            <button onClick={onClose} aria-label="Fechar" style={{
+              background: "none", border: "none", fontSize: 22, color: "#9BA4B5", cursor: "pointer",
+              padding: 0, lineHeight: 1, fontWeight: 300
+            }}>×</button>
+          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Digite o nome da cidade…"
+            style={{
+              width: "100%", padding: "11px 13px",
+              fontSize: 14, fontFamily: "inherit",
+              border: "1.5px solid #DEDEDE", borderRadius: 10,
+              outline: "none", boxSizing: "border-box",
+              transition: "border-color 0.15s"
+            }}
+            onFocus={(e) => e.target.style.borderColor = "#1351B4"}
+            onBlur={(e) => e.target.style.borderColor = "#DEDEDE"}
+          />
+          {currentCity && !query && (
+            <div style={{ fontSize: 11, color: "#7A8394", marginTop: 8 }}>
+              Atualmente: <strong style={{ color: "#1351B4" }}>{currentCity.nome}, {currentCity.uf}</strong>
+            </div>
+          )}
+        </div>
+
+        <div style={{ overflow: "auto", flex: 1 }}>
+          {query.length < 2 && (
+            <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 12, color: "#9BA4B5" }}>
+              Digite ao menos 2 letras para buscar
+            </div>
+          )}
+          {query.length >= 2 && results.length === 0 && (
+            <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 13, color: "#9BA4B5" }}>
+              Nenhuma cidade encontrada para "{query}"
+            </div>
+          )}
+          {results.map((m, i) => (
+            <button
+              key={m[0] + m[2]}
+              onClick={() => onSelect({ nome: m[0], uf: m[2], lat: m[3], lng: m[4], distancia: 0 })}
+              style={{
+                width: "100%", padding: "12px 18px",
+                background: "transparent", border: "none",
+                borderBottom: i === results.length - 1 ? "none" : "1px solid #F5F6F8",
+                textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+                transition: "background 0.12s"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#F8FAFE"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1F1F1F" }}>
+                  {m[0]}{m[5] ? " ★" : ""}
+                </div>
+                <div style={{ fontSize: 11, color: "#7A8394", marginTop: 1 }}>{m[2]}</div>
+              </div>
+              <span style={{ fontSize: 16, color: "#9BA4B5" }}>›</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{
+          padding: "10px 18px", borderTop: "1px solid #F1F2F5",
+          fontSize: 10, color: "#9BA4B5", textAlign: "center"
+        }}>
+          Coordenadas obtidas do centróide do município (IBGE)
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -436,122 +545,6 @@ function haversine(lat1, lon1, lat2, lon2) {
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-//   COMPONENTE CitySearchModal — modal de busca textual
-// ═══════════════════════════════════════════════════════════════
-function CitySearchModal({ municipios, onSelect, onClose, currentCity }) {
-  const [query, setQuery] = React.useState('');
-  const inputRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (inputRef.current) inputRef.current.focus();
-  }, []);
-
-  // Bloqueia scroll do body enquanto modal está aberto
-  React.useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
-  const results = React.useMemo(
-    () => buscarMunicipios(municipios, query, 12),
-    [municipios, query]
-  );
-
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(12,50,111,0.55)",
-      zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center",
-      padding: "60px 16px 16px", animation: "fadeUp 0.18s ease-out"
-    }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        width: "100%", maxWidth: 460, background: "#FFFFFF",
-        borderRadius: 14, boxShadow: "0 20px 50px rgba(0,0,0,0.30)",
-        overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "82vh"
-      }}>
-        {/* Header */}
-        <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid #F1F2F5" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0C326F" }}>Mudar localização</h3>
-            <button onClick={onClose} aria-label="Fechar" style={{
-              background: "none", border: "none", fontSize: 22, color: "#9BA4B5", cursor: "pointer",
-              padding: 0, lineHeight: 1, fontWeight: 300
-            }}>×</button>
-          </div>
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Digite o nome da cidade…"
-            style={{
-              width: "100%", padding: "11px 13px",
-              fontSize: 14, fontFamily: "inherit",
-              border: "1.5px solid #DEDEDE", borderRadius: 10,
-              outline: "none", boxSizing: "border-box",
-              transition: "border-color 0.15s"
-            }}
-            onFocus={(e) => e.target.style.borderColor = "#1351B4"}
-            onBlur={(e) => e.target.style.borderColor = "#DEDEDE"}
-          />
-          {currentCity && !query && (
-            <div style={{ fontSize: 11, color: "#7A8394", marginTop: 8 }}>
-              Atualmente: <strong style={{ color: "#1351B4" }}>{currentCity.nome}, {currentCity.uf}</strong>
-            </div>
-          )}
-        </div>
-
-        {/* Lista de resultados */}
-        <div style={{ overflow: "auto", flex: 1 }}>
-          {query.length < 2 && (
-            <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 12, color: "#9BA4B5" }}>
-              Digite ao menos 2 letras para buscar
-            </div>
-          )}
-          {query.length >= 2 && results.length === 0 && (
-            <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 13, color: "#9BA4B5" }}>
-              Nenhuma cidade encontrada para "{query}"
-            </div>
-          )}
-          {results.map((m, i) => (
-            <button
-              key={m[0] + m[2]}
-              onClick={() => onSelect({ nome: m[0], uf: m[2], lat: m[3], lng: m[4], distancia: 0 })}
-              style={{
-                width: "100%", padding: "12px 18px",
-                background: "transparent", border: "none",
-                borderBottom: i === results.length - 1 ? "none" : "1px solid #F5F6F8",
-                textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-                transition: "background 0.12s"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#F8FAFE"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1F1F1F" }}>
-                  {m[0]}{m[5] ? " ★" : ""}
-                </div>
-                <div style={{ fontSize: 11, color: "#7A8394", marginTop: 1 }}>{m[2]}</div>
-              </div>
-              <span style={{ fontSize: 16, color: "#9BA4B5" }}>›</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: "10px 18px", borderTop: "1px solid #F1F2F5",
-          fontSize: 10, color: "#9BA4B5", textAlign: "center"
-        }}>
-          Coordenadas obtidas do centróide do município (IBGE)
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function SocorroPeconhentos() {
@@ -896,7 +889,7 @@ function SocorroPeconhentos() {
       {/* Faixa institucional superior estilo Gov.br */}
       <div style={{ background: "#0C326F", padding: "6px 16px", borderBottom: "1px solid rgba(255,255,255,0.10)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Programa de Saúde Pública</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Utilidade Pública</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* Status discreto de cache offline */}
             {offlineStatus.dataCached && (
@@ -905,7 +898,7 @@ function SocorroPeconhentos() {
                 display: "inline-flex", alignItems: "center", gap: 4,
                 background: "rgba(22,136,33,0.30)", border: "1px solid rgba(22,136,33,0.45)",
                 padding: "2px 7px", borderRadius: 3, letterSpacing: 0.3
-              }}>● Offline pronto</span>
+              }}>✅ Disponível Offline</span>
             )}
             {!offlineStatus.online && (
               <span style={{
@@ -1168,7 +1161,6 @@ Protótipo Socorro Peçonhentos`;
 
         {/* Header */}
         <div style={{ textAlign: "center", padding: "24px 0 16px", animation: "fadeUp 0.4s ease-out" }}>
-          <div style={{ fontSize: 11, letterSpacing: 2, color: "#1351B4", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Bem-vindo</div>
           <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.2, color: "#0C326F", letterSpacing: -0.3 }}>Encontre o soro certo,<br/>no tempo certo</h2>
           <p style={{ fontSize: 13, color: "#636363", marginTop: 10, lineHeight: 1.5 }}>Hospital mais próximo com soro específico para acidentes com animais peçonhentos</p>
           <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 16 }}>
@@ -1200,13 +1192,7 @@ Protótipo Socorro Peçonhentos`;
                 </button>
               ))}
             </div>
-            <button onClick={() => { goToResults("__COMPLETO__"); }} style={{
-              width: "100%", marginTop: 16, padding: "14px",
-              background: "#FFCD07", border: "none",
-              borderRadius: 12, color: "#0C326F", fontWeight: 800, fontSize: 14,
-              cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase", boxShadow: "0 2px 8px rgba(255,205,7,0.30)"
-            }}>⚡ Não sei, buscar hospital mais completo</button>
-
+            
             {/* GPS Status com cidade detectada e botão Mudar */}
             <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#7A8394", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1680,14 +1666,18 @@ Protótipo Socorro Peçonhentos`;
 
             <div style={{ fontSize: 10, color: "#888", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Concepção e desenvolvimento</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#1F1F1F", marginBottom: 2 }}>Anderson Pires</div>
-            <div style={{ fontSize: 11, color: "#636363", marginBottom: 14 }}>PMO Sênior e pesquisador independente</div>
+            <div style={{ fontSize: 11, color: "#636363", marginBottom: 14 }}>Especialista em Tecnologia e Transformação Digital</div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <a href="https://wa.me/5541995547920" target="_blank" rel="noopener noreferrer" style={{
+              <a href="mailto:contato@maissoro.org" style={{
+
                 flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
+
                 borderRadius: 6, padding: "8px 10px", textDecoration: "none",
+
                 color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
-              }}>(41) 99554-7920</a>
+
+              }}>contato@maissoro.org</a>
               <a href="https://www.linkedin.com/in/andersonpires" target="_blank" rel="noopener noreferrer" style={{
                 flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
                 borderRadius: 6, padding: "8px 10px", textDecoration: "none",
