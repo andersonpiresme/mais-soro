@@ -1,8 +1,9 @@
 {
   "name": "Mais Soro",
   "short_name": "Mais Soro",
-  "description": "Mais Soro. Mais Vida. Aplicativo nacional de saúde pública que localiza o hospital mais próximo com soro específico para acidentes com animais peçonhentos no Brasil",
+  "description": "Aplicativo nacional de saúde pública que localiza o hospital mais próximo com soro específico para acidentes com animais peçonhentos no Brasil",
   "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F8F8F8",

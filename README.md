@@ -5,7 +5,7 @@
 
 **Aplicativo nacional de saúde pública que localiza o hospital mais próximo com soro específico para acidentes com animais peçonhentos no Brasil.**
 
-[🔗 Acessar o aplicativo](https://andersonpiresme.github.io/mais-soro/)
+[🔗 Acessar o aplicativo](https://maissoro.org)
 
 ---
 
@@ -13,7 +13,7 @@
 
 ## Sobre o projeto
 
-O **Mais Soro** é um programa de saúde pública digital de escopo nacional, concebido como contribuição independente para reduzir a mortalidade em acidentes com animais peçonhentos no Brasil. O aplicativo conecta a vítima ao hospital mais próximo que disponha do soro antiveneno específico para o tipo de envenenamento sofrido, cruzando geolocalização, base de dados hospitalar curada e protocolos clínicos do Ministério da Saúde.
+O **Mais Soro** é um programa de saúde pública digital de escopo nacional, concebido como contribuição independente para reduzir a mortalidade em acidentes com animais peçonhentos no Brasil. O aplicativo conecta a vítima ao hospital mais próximo que disponha do soro antiveneno específico para o tipo de envenenamento sofrido, cruzando geolocalização, base de dados oficial do Cadastro Nacional de Estabelecimentos de Saúde (CNES) e protocolos clínicos do Ministério da Saúde.
 
 ### Contexto
 
@@ -23,11 +23,9 @@ A ferramenta endereça três problemas simultâneos: localizar o hospital mais p
 
 ## Cobertura
 
-O projeto é concebido como programa de cobertura nacional, estruturado em arquitetura modular que permite expansão progressiva por unidade federativa.
+**Cobertura nacional desde o lançamento:** mais de 2.200 unidades hospitalares mapeadas nas 27 unidades federativas, com dados oficiais do Cadastro Nacional de Estabelecimentos de Saúde (CNES) e enriquecimento autoral.
 
-**Lançamento inicial:** Paraná, Santa Catarina e Rio Grande do Sul, com mais de 410 unidades hospitalares de referência curadas.
-
-**Expansão planejada para 2026:** incorporação das 24 unidades federativas restantes, com meta de cobertura integral do território brasileiro.
+A base de dados foi estruturada a partir do Relatório de Unidades com Antivenenos publicado pelo Ministério da Saúde, cruzado com o cadastro CNES oficial e enriquecido com geolocalização precisa para roteamento em emergência.
 
 ## Funcionalidades
 
@@ -38,25 +36,50 @@ O projeto é concebido como programa de cobertura nacional, estruturado em arqui
 - **Cronômetro de Atendimento Pré-Hospitalar (APH)** que monitora visualmente a janela terapêutica desde o horário do acidente
 - **Ficha de transferência APH** gerada automaticamente com dados clínicos estruturados para entrega ao médico receptor ou envio prévio via WhatsApp
 - **Card de urgência clínica** por tipo de envenenamento, contendo sintomas esperados, janela terapêutica, riscos para crianças e idosos, e informações para relatar ao hospital
+- **Badges informativos por unidade**: turno de atendimento (24h ou horário restrito), capacidade de internação, centro cirúrgico, tipo de unidade
+- **Diferenciação visual de unidades inativas no CNES**: hospitais com cadastro desativado aparecem na lista marcados, mantendo transparência sem direcionar pacientes para esses pontos
 - **Contatos de emergência sempre visíveis** (SAMU 192, CIATox 0800-722-6001, Bombeiros 193)
-- **Funcionamento offline** via Progressive Web App (PWA) com Service Worker
-- **Instalável na tela inicial** de dispositivos Android e iOS
+- **Funcionamento offline** via Progressive Web App (PWA) com Service Worker e cache estratificado
+- **Status discreto de cache offline** que sinaliza quando os dados estão prontos para uso sem conexão
+- **Instalável na tela inicial** de dispositivos Android e iOS, com botão de instalação integrado quando o navegador permite
 
-## Tecnologias
+## Arquitetura técnica
 
-- React 18 via CDN, sem necessidade de build
-- Progressive Web App com Service Worker para cache offline
-- HTML5 Geolocation API com detecção de contexto seguro
-- SVG vetorial inline para logotipo
-- Design System alinhado ao Gov.br, padrão visual oficial do governo federal brasileiro
+- **React 18 via CDN**, sem necessidade de build step
+- **Progressive Web App** com Service Worker que aplica cache estratificado:
+  - Shell crítico (HTML, manifest, dependências React) carrega na primeira visita
+  - Dados (`hospitais.json` e `overrides.json`) carregam em segundo plano após o shell
+  - Estratégia stale-while-revalidate para os dados, garantindo resposta imediata e atualização em background
+- **HTML5 Geolocation API** com detecção de contexto seguro
+- **SVG vetorial inline** para logotipo
+- **Design System alinhado ao Gov.br**, padrão visual oficial do governo federal brasileiro
+- **Estrutura de dados externalizada** em `data/hospitais.json` (base CNES + geocoding) e `data/overrides.json` (correções pontuais auditáveis)
+
+### Estrutura de pastas
+
+```
+mais-soro/
+├── index.html          # Componente React principal
+├── sw.js               # Service Worker com cache estratificado
+├── manifest.json       # PWA manifest
+├── CNAME               # Domínio personalizado (maissoro.org)
+├── data/
+│   ├── hospitais.json  # 2.246 unidades CNES com geocoding
+│   └── overrides.json  # Correções manuais de coordenadas
+└── README.md
+```
 
 ## Fonte dos dados
 
-Base curada a partir de documentos públicos das Secretarias Estaduais de Saúde, com enriquecimento autoral incluindo georreferenciamento, normalização de categorias de atendimento, cruzamento com protocolos clínicos de soroterapia antipeçonhenta e estruturação relacional por tipo de urgência.
+Base composta pelo cruzamento de:
+
+- **Cadastro Nacional de Estabelecimentos de Saúde (CNES)** — Ministério da Saúde
+- **Relatório de Unidades com Antivenenos** — Secretaria de Vigilância em Saúde / Ministério da Saúde
+- **Geolocalização** — Nominatim/OpenStreetMap, com sanity check por bounding box estadual e correções manuais auditáveis para casos com cadastro CNES inconsistente
 
 A curadoria da base de dados constitui obra intelectual protegida pelo artigo 7º, inciso XIII, da Lei 9.610/98, como coletânea que, por sua seleção, organização e disposição, representa criação intelectual original.
 
-**Importante:** os dados de contato são públicos, mas a disponibilidade real de soro em cada unidade varia ao longo do tempo. Sempre confirme por telefone antes do deslocamento.
+**Importante:** os dados de contato e a disponibilidade de soro são públicos, mas o estoque real em cada unidade varia ao longo do tempo. Sempre confirme por telefone antes do deslocamento.
 
 ## Inovações conceituais
 
@@ -66,12 +89,14 @@ O projeto integra as seguintes inovações autorais, parte integrante da obra re
 - Algoritmo de ranqueamento por cobertura máxima para casos sem identificação do animal
 - Cronômetro APH com coloração progressiva conforme proximidade da janela terapêutica
 - Ficha de transferência clínica gerada automaticamente para acelerar o atendimento hospitalar
+- Sistema de tiebreakers no ranqueamento que considera capacidade de internação e centro cirúrgico para casos graves
+- Diferenciação transparente de unidades desativadas no CNES, mantendo registro histórico sem direcionar pacientes
 
 ## Autoria e direitos
 
 **Concepção, desenvolvimento e curadoria:** Anderson Pires
 
-PMO Sênior e pesquisador independente em saúde pública digital, baseado em Cascavel, Paraná, Brasil.
+PMO Sênior e pesquisador independente em saúde pública digital, baseado em Cascavel, Paraná, Brasil. Membro IEEE e Senior Member ISA.
 
 - 💼 LinkedIn: [linkedin.com/in/andersonpires](https://www.linkedin.com/in/andersonpires)
 - 📷 Instagram: [@andersonpires.me](https://www.instagram.com/andersonpires.me/)
