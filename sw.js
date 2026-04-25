@@ -9,7 +9,7 @@
  * IMPORTANTE: ao alterar dados em data/*.json, troque DATA_VERSION para forçar refresh.
  */
 
-const VERSION = 'mais-soro-v3.1';
+const VERSION = 'mais-soro-v3.2';
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
@@ -27,7 +27,12 @@ const SHELL_ASSETS = [
 // Dados: carregam depois do shell, idealmente em segundo plano
 const DATA_ASSETS = [
   './data/hospitais.json',
-  './data/overrides.json'
+  './data/overrides.json',
+  './data/municipios.json',
+  './data/icons/cobra.png',
+  './data/icons/aranha.png',
+  './data/icons/escopiao.png',
+  './data/icons/lagarta.png'
 ];
 
 // ═══════════════════════════════════════════════
@@ -83,9 +88,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Dados (JSON): stale-while-revalidate
+  // Dados (JSON e ícones do app): stale-while-revalidate
   if (url.pathname.endsWith('hospitais.json') ||
-      url.pathname.endsWith('overrides.json')) {
+      url.pathname.endsWith('overrides.json') ||
+      url.pathname.endsWith('municipios.json') ||
+      url.pathname.includes('/data/icons/')) {
     event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
     return;
   }

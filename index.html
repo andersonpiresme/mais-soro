@@ -151,6 +151,68 @@ function useHospitalsData() {
   return state;
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+//   HOOK useMunicipios — carrega data/municipios.json
+//   Formato compacto: array de [nome, nome_search, uf, lat, lng, capital]
+// ═══════════════════════════════════════════════════════════════
+function useMunicipios() {
+  const [state, setState] = React.useState({ municipios: [], loading: true });
+
+  React.useEffect(() => {
+    fetch('./data/municipios.json')
+      .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
+      .then(data => {
+        console.log('[Mais Soro] municipios.json carregado:', data.total, 'municípios');
+        setState({ municipios: data.municipios || [], loading: false });
+      })
+      .catch(err => {
+        console.warn('[Mais Soro] municipios.json indisponível:', err);
+        setState({ municipios: [], loading: false });
+      });
+  }, []);
+
+  return state;
+}
+
+// Helpers de busca e reverse geocoding ─────────────────────────
+function _stripAcentos(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function buscarMunicipios(municipios, query, limit) {
+  limit = limit || 8;
+  const q = _stripAcentos(query).trim();
+  if (q.length < 2) return [];
+  const results = [];
+  for (const m of municipios) {
+    if (m[1].includes(q)) {
+      results.push(m);
+      if (results.length >= limit) break;
+    }
+  }
+  // Boost: quem começa com a query vem primeiro
+  results.sort((a, b) => {
+    const aStart = a[1].startsWith(q) ? 0 : 1;
+    const bStart = b[1].startsWith(q) ? 0 : 1;
+    if (aStart !== bStart) return aStart - bStart;
+    // Capitais primeiro
+    return (b[5] || 0) - (a[5] || 0);
+  });
+  return results;
+}
+
+function detectarCidadePorCoord(municipios, lat, lng) {
+  if (!municipios || municipios.length === 0) return null;
+  let best = null;
+  let bestDist = Infinity;
+  for (const m of municipios) {
+    const d = haversine(lat, lng, m[3], m[4]);
+    if (d < bestDist) { bestDist = d; best = m; }
+  }
+  return best ? { nome: best[0], uf: best[2], lat: best[3], lng: best[4], distancia: bestDist } : null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 //   HOOK useOfflineStatus — monitora SW e detecta dados em cache
 // ═══════════════════════════════════════════════════════════════
@@ -253,7 +315,7 @@ function usePWAInstall() {
 
 const ANIMAL_TYPES = [
   {
-    id: "cobra", label: "Cobra / Serpente", icon: "🐍",
+    id: "cobra", label: "Cobra / Serpente", icon: "🐍", iconPath: "./data/icons/cobra.png",
     subtypes: [
       { id: "Botrópico", label: "Jararaca / Jararacuçu / Cotiara", desc: "Corpo grosso, cabeça triangular, padrão em 'V'", color: "#8B4513" },
       { id: "Crotálico", label: "Cascavel", desc: "Chocalho na ponta da cauda, som de guizo", color: "#DAA520" },
@@ -261,7 +323,7 @@ const ANIMAL_TYPES = [
     ]
   },
   {
-    id: "aranha", label: "Aranha", icon: "🕷️",
+    id: "aranha", label: "Aranha", icon: "🕷️", iconPath: "./data/icons/aranha.png",
     subtypes: [
       { id: "Loxoscélico", label: "Aranha-marrom", desc: "Pequena, marrom, teia irregular em cantos escuros", color: "#8B6914" },
       { id: "Fonêutrico", label: "Aranha-armadeira", desc: "Grande, agressiva, levanta as patas dianteiras", color: "#654321" },
@@ -269,14 +331,27 @@ const ANIMAL_TYPES = [
     ]
   },
   {
-    id: "escorpiao", label: "Escorpião", icon: "🦂",
+    id: "escorpiao", label: "Escorpião", icon: "🦂", iconPath: "./data/icons/escopiao.png",
     subtypes: [{ id: "Escorpiônico", label: "Escorpião (Tityus)", desc: "Escorpião amarelo ou marrom", color: "#B8860B" }]
   },
   {
-    id: "lagarta", label: "Lagarta / Taturana", icon: "🐛",
+    id: "lagarta", label: "Lagarta / Taturana", icon: "🐛", iconPath: "./data/icons/lagarta.png",
     subtypes: [{ id: "Lonômico", label: "Taturana (Lonomia)", desc: "Lagarta verde com espinhos, vive em troncos", color: "#228B22" }]
   },
 ];
+
+// Helper: dado um specificType (ex "Botrópico"), retorna o animal correspondente
+function getAnimalBySpecificType(specificType) {
+  if (!specificType || specificType === "__COMPLETO__") return null;
+  for (const animal of ANIMAL_TYPES) {
+    if (animal.subtypes.some(s => s.id === specificType)) {
+      return animal;
+    }
+  }
+  return null;
+}
+
+
 
 // ── Dados clínicos de urgência por tipo de acidente ──
 // Fonte: Manual de Diagnóstico e Tratamento de Acidentes por Animais Peçonhentos (Ministério da Saúde)
@@ -363,16 +438,148 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+//   COMPONENTE CitySearchModal — modal de busca textual
+// ═══════════════════════════════════════════════════════════════
+function CitySearchModal({ municipios, onSelect, onClose, currentCity }) {
+  const [query, setQuery] = React.useState('');
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) inputRef.current.focus();
+  }, []);
+
+  // Bloqueia scroll do body enquanto modal está aberto
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const results = React.useMemo(
+    () => buscarMunicipios(municipios, query, 12),
+    [municipios, query]
+  );
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(12,50,111,0.55)",
+      zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center",
+      padding: "60px 16px 16px", animation: "fadeUp 0.18s ease-out"
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: "100%", maxWidth: 460, background: "#FFFFFF",
+        borderRadius: 14, boxShadow: "0 20px 50px rgba(0,0,0,0.30)",
+        overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "82vh"
+      }}>
+        {/* Header */}
+        <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid #F1F2F5" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0C326F" }}>Mudar localização</h3>
+            <button onClick={onClose} aria-label="Fechar" style={{
+              background: "none", border: "none", fontSize: 22, color: "#9BA4B5", cursor: "pointer",
+              padding: 0, lineHeight: 1, fontWeight: 300
+            }}>×</button>
+          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Digite o nome da cidade…"
+            style={{
+              width: "100%", padding: "11px 13px",
+              fontSize: 14, fontFamily: "inherit",
+              border: "1.5px solid #DEDEDE", borderRadius: 10,
+              outline: "none", boxSizing: "border-box",
+              transition: "border-color 0.15s"
+            }}
+            onFocus={(e) => e.target.style.borderColor = "#1351B4"}
+            onBlur={(e) => e.target.style.borderColor = "#DEDEDE"}
+          />
+          {currentCity && !query && (
+            <div style={{ fontSize: 11, color: "#7A8394", marginTop: 8 }}>
+              Atualmente: <strong style={{ color: "#1351B4" }}>{currentCity.nome}, {currentCity.uf}</strong>
+            </div>
+          )}
+        </div>
+
+        {/* Lista de resultados */}
+        <div style={{ overflow: "auto", flex: 1 }}>
+          {query.length < 2 && (
+            <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 12, color: "#9BA4B5" }}>
+              Digite ao menos 2 letras para buscar
+            </div>
+          )}
+          {query.length >= 2 && results.length === 0 && (
+            <div style={{ padding: "24px 18px", textAlign: "center", fontSize: 13, color: "#9BA4B5" }}>
+              Nenhuma cidade encontrada para "{query}"
+            </div>
+          )}
+          {results.map((m, i) => (
+            <button
+              key={m[0] + m[2]}
+              onClick={() => onSelect({ nome: m[0], uf: m[2], lat: m[3], lng: m[4], distancia: 0 })}
+              style={{
+                width: "100%", padding: "12px 18px",
+                background: "transparent", border: "none",
+                borderBottom: i === results.length - 1 ? "none" : "1px solid #F5F6F8",
+                textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+                transition: "background 0.12s"
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#F8FAFE"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1F1F1F" }}>
+                  {m[0]}{m[5] ? " ★" : ""}
+                </div>
+                <div style={{ fontSize: 11, color: "#7A8394", marginTop: 1 }}>{m[2]}</div>
+              </div>
+              <span style={{ fontSize: 16, color: "#9BA4B5" }}>›</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "10px 18px", borderTop: "1px solid #F1F2F5",
+          fontSize: 10, color: "#9BA4B5", textAlign: "center"
+        }}>
+          Coordenadas obtidas do centróide do município (IBGE)
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SocorroPeconhentos() {
   // ─── Carga de dados externos ───
   const { hospitals: HOSPITALS, loading: hospitalsLoading, error: hospitalsError } = useHospitalsData();
+  const { municipios: MUNICIPIOS } = useMunicipios();
   const offlineStatus = useOfflineStatus();
   const pwaInstall = usePWAInstall();
+
+  // Estado da cidade atual (detectada por GPS ou escolhida manualmente)
+  const [currentCity, setCurrentCity] = React.useState(null);
+  const [showCityModal, setShowCityModal] = React.useState(false);
 
   const [step, setStep] = React.useState(0);
   const [animalType, setAnimalType] = React.useState(null);
   const [specificType, setSpecificType] = React.useState(null);
   const [userLocation, setUserLocation] = React.useState(null);
+
+  // Detectar cidade automaticamente quando userLocation muda
+  React.useEffect(() => {
+    if (userLocation && MUNICIPIOS.length > 0) {
+      const cidade = detectarCidadePorCoord(MUNICIPIOS, userLocation.lat, userLocation.lng);
+      if (cidade) {
+        console.log('[Mais Soro] Cidade detectada:', cidade.nome, '/', cidade.uf, '(Δ' + cidade.distancia.toFixed(1) + ' km)');
+        setCurrentCity(cidade);
+      }
+    }
+  }, [userLocation, MUNICIPIOS]);
   const [locationError, setLocationError] = React.useState(false);
   const [results, setResults] = React.useState([]);
   const [loadingGPS, setLoadingGPS] = React.useState(false);
@@ -641,6 +848,21 @@ function SocorroPeconhentos() {
   const severityLevel = getSeverityLevel();
 
   return (
+    <>
+    {showCityModal && (
+      <CitySearchModal
+        municipios={MUNICIPIOS}
+        currentCity={currentCity}
+        onSelect={(cidade) => {
+          console.log('[Mais Soro] Cidade selecionada manualmente:', cidade.nome, cidade.uf);
+          setUserLocation({ lat: cidade.lat, lng: cidade.lng });
+          setCurrentCity(cidade);
+          setGpsStatus("ok");
+          setShowCityModal(false);
+        }}
+        onClose={() => setShowCityModal(false)}
+      />
+    )}
     <div style={{
       minHeight: "100vh",
       background: "#F8F8F8",
@@ -674,7 +896,7 @@ function SocorroPeconhentos() {
       {/* Faixa institucional superior estilo Gov.br */}
       <div style={{ background: "#0C326F", padding: "6px 16px", borderBottom: "1px solid rgba(255,255,255,0.10)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Utilidade Pública</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Programa de Saúde Pública</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* Status discreto de cache offline */}
             {offlineStatus.dataCached && (
@@ -683,7 +905,7 @@ function SocorroPeconhentos() {
                 display: "inline-flex", alignItems: "center", gap: 4,
                 background: "rgba(22,136,33,0.30)", border: "1px solid rgba(22,136,33,0.45)",
                 padding: "2px 7px", borderRadius: 3, letterSpacing: 0.3
-              }}>✅ Disponível Offline</span>
+              }}>● Offline pronto</span>
             )}
             {!offlineStatus.online && (
               <span style={{
@@ -946,6 +1168,7 @@ Protótipo Socorro Peçonhentos`;
 
         {/* Header */}
         <div style={{ textAlign: "center", padding: "24px 0 16px", animation: "fadeUp 0.4s ease-out" }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: "#1351B4", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Bem-vindo</div>
           <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.2, color: "#0C326F", letterSpacing: -0.3 }}>Encontre o soro certo,<br/>no tempo certo</h2>
           <p style={{ fontSize: 13, color: "#636363", marginTop: 10, lineHeight: 1.5 }}>Hospital mais próximo com soro específico para acidentes com animais peçonhentos</p>
           <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 16 }}>
@@ -969,22 +1192,49 @@ Protótipo Socorro Peçonhentos`;
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
                   animation: `fadeUp ${0.3 + i*0.1}s ease-out`
                 }}>
-                  <span style={{ fontSize: 40 }}>{animal.icon}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{animal.label}</span>
+                  <img src={animal.iconPath} alt={animal.label} loading="lazy" style={{
+                    width: 64, height: 64, objectFit: "contain", flexShrink: 0
+                  }} onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "inline"; }} />
+                  <span style={{ display: "none", fontSize: 40 }}>{animal.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#1351B4" }}>{animal.label}</span>
                 </button>
               ))}
             </div>
-            
-            {/* GPS Status */}
-            <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#7A8394", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <div style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: gpsStatus === "ok" ? "#22c55e" : gpsStatus === "fallback" ? "#f59e0b" : "#9BA4B5",
-                animation: gpsStatus === "loading" ? "pulse-bar 1.5s ease-in-out infinite" : "none"
-              }}/>
-              {gpsStatus === "ok" && "📍 Localização obtida"}
-              {gpsStatus === "loading" && "Obtendo localização..."}
-              {gpsStatus === "fallback" && "GPS indisponível, usando Cascavel-PR"}
+            <button onClick={() => { goToResults("__COMPLETO__"); }} style={{
+              width: "100%", marginTop: 16, padding: "14px",
+              background: "#FFCD07", border: "none",
+              borderRadius: 12, color: "#0C326F", fontWeight: 800, fontSize: 14,
+              cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase", boxShadow: "0 2px 8px rgba(255,205,7,0.30)"
+            }}>⚡ Não sei, buscar hospital mais completo</button>
+
+            {/* GPS Status com cidade detectada e botão Mudar */}
+            <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#7A8394", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: gpsStatus === "ok" ? "#22c55e" : gpsStatus === "fallback" ? "#f59e0b" : "#9BA4B5",
+                  animation: gpsStatus === "loading" ? "pulse-bar 1.5s ease-in-out infinite" : "none",
+                  flexShrink: 0
+                }}/>
+                <span>
+                  {gpsStatus === "loading" && "Obtendo localização…"}
+                  {gpsStatus === "ok" && currentCity && (
+                    <>📍 {currentCity.nome}, {currentCity.uf}</>
+                  )}
+                  {gpsStatus === "ok" && !currentCity && "📍 Localização obtida"}
+                  {gpsStatus === "fallback" && currentCity && (
+                    <>📍 {currentCity.nome}, {currentCity.uf} (referência)</>
+                  )}
+                  {gpsStatus === "fallback" && !currentCity && "GPS indisponível"}
+                </span>
+              </div>
+              {gpsStatus !== "loading" && MUNICIPIOS.length > 0 && (
+                <button onClick={() => setShowCityModal(true)} style={{
+                  background: "transparent", border: "1px solid #DEDEDE",
+                  color: "#1351B4", fontSize: 11, fontWeight: 600,
+                  padding: "4px 10px", borderRadius: 6, cursor: "pointer"
+                }}>Mudar localização</button>
+              )}
             </div>
           </div>
         )}
@@ -994,8 +1244,11 @@ Protótipo Socorro Peçonhentos`;
           <div style={{ animation: "fadeUp 0.3s ease-out" }}>
             <button onClick={() => { setStep(0); setAnimalType(null); }} style={{ background: "none", border: "none", color: "#1351B4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>← Voltar</button>
             <div style={{ background: "#FFFFFF", borderRadius: 12, padding: 20, textAlign: "center", marginBottom: 20, border: "1px solid #DEDEDE", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-              <span style={{ fontSize: 48 }}>{selectedAnimalData.icon}</span>
-              <h2 style={{ fontSize: 18, marginTop: 8, marginBottom: 4 }}>{selectedAnimalData.label}</h2>
+              <img src={selectedAnimalData.iconPath} alt={selectedAnimalData.label} loading="lazy" style={{
+                width: 72, height: 72, objectFit: "contain", display: "inline-block"
+              }} onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "inline"; }} />
+              <span style={{ display: "none", fontSize: 48 }}>{selectedAnimalData.icon}</span>
+              <h2 style={{ fontSize: 18, marginTop: 8, marginBottom: 4, color: "#1351B4", fontWeight: 800 }}>{selectedAnimalData.label}</h2>
               <p style={{ fontSize: 13, color: "#636363" }}>Qual se parece mais com o animal?</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1051,13 +1304,21 @@ Protótipo Socorro Peçonhentos`;
 
             {locationError && (
               <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 12, color: "#fbbf24" }}>
-                GPS indisponível. Mostrando resultados a partir de Brasília-DF como referência. Em emergência, ligue SAMU 192.
+                GPS indisponível. Você pode mudar a localização tocando em "Mudar localização". Em emergência, ligue SAMU 192.
               </div>
             )}
 
             <div style={{ background: "#FFFFFF", border: "1.5px solid #1351B4", borderRadius: 12, padding: 16, marginBottom: 16, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              {(() => {
+                const animalForType = getAnimalBySpecificType(specificType);
+                return animalForType ? (
+                  <img src={animalForType.iconPath} alt={animalForType.label} loading="lazy" style={{
+                    width: 44, height: 44, objectFit: "contain", marginBottom: 4
+                  }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                ) : null;
+              })()}
               <div style={{ fontSize: 12, color: "#636363", marginBottom: 4, fontWeight: 600 }}>{specificType === "__COMPLETO__" ? "Critério de busca" : "Soro necessário"}</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: specificType === "__COMPLETO__" ? "#0C326F" : "#1351B4" }}>{specificType === "__COMPLETO__" ? "Atendimento Completo" : specificType}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#1351B4" }}>{specificType === "__COMPLETO__" ? "Atendimento Completo" : specificType}</div>
               <div style={{ fontSize: 11, color: "#888888", marginTop: 6 }}>{results.length} hospitais encontrados na região</div>
             </div>
 
@@ -1419,18 +1680,14 @@ Protótipo Socorro Peçonhentos`;
 
             <div style={{ fontSize: 10, color: "#888", fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Concepção e desenvolvimento</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#1F1F1F", marginBottom: 2 }}>Anderson Pires</div>
-            <div style={{ fontSize: 11, color: "#636363", marginBottom: 14 }}>Especialista em Tecnologia e Transformação Digital</div>
+            <div style={{ fontSize: 11, color: "#636363", marginBottom: 14 }}>PMO Sênior e pesquisador independente</div>
 
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <a href="mailto:contato@maissoro.org" style={{
-
+              <a href="https://wa.me/5541995547920" target="_blank" rel="noopener noreferrer" style={{
                 flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
-
                 borderRadius: 6, padding: "8px 10px", textDecoration: "none",
-
                 color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
-
-              }}>contato@maissoro.org</a>
+              }}>(41) 99554-7920</a>
               <a href="https://www.linkedin.com/in/andersonpires" target="_blank" rel="noopener noreferrer" style={{
                 flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
                 borderRadius: 6, padding: "8px 10px", textDecoration: "none",
@@ -1454,6 +1711,7 @@ Protótipo Socorro Peçonhentos`;
         </div>
       </div>
     </div>
+    </>
   );
 }
 
