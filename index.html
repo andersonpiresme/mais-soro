@@ -222,19 +222,13 @@ function CitySearchModal({ municipios, onSelect, onClose, currentCity }) {
     if (inputRef.current) inputRef.current.focus();
   }, []);
 
-  React.useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
   const results = React.useMemo(
     () => buscarMunicipios(municipios, query, 12),
     [municipios, query]
   );
 
   return (
-    <div onClick={onClose} style={{
+    <div role="dialog" aria-modal="true" aria-labelledby="cityModalTitle" onClick={onClose} style={{
       position: "fixed", inset: 0, background: "rgba(12,50,111,0.55)",
       zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center",
       padding: "60px 16px 16px", animation: "fadeUp 0.18s ease-out"
@@ -246,7 +240,7 @@ function CitySearchModal({ municipios, onSelect, onClose, currentCity }) {
       }}>
         <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid #F1F2F5" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0C326F" }}>Mudar localização</h3>
+            <h3 id="cityModalTitle" style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0C326F" }}>Mudar localização</h3>
             <button onClick={onClose} aria-label="Fechar" style={{
               background: "none", border: "none", fontSize: 22, color: "#9BA4B5", cursor: "pointer",
               padding: 0, lineHeight: 1, fontWeight: 300
@@ -334,8 +328,11 @@ function useOfflineStatus() {
 
   React.useEffect(() => {
     const onMsg = (event) => {
-      if (event.data?.type === 'DATA_CACHED' || event.data?.type === 'DATA_UPDATED') {
+      const t = event.data?.type;
+      if (t === 'DATA_CACHED' || t === 'DATA_UPDATED') {
         setStatus(s => ({ ...s, dataCached: true }));
+      } else if (t === 'DATA_CACHED_STATUS') {
+        setStatus(s => ({ ...s, dataCached: event.data.cached }));
       }
     };
 
@@ -346,7 +343,6 @@ function useOfflineStatus() {
       navigator.serviceWorker.addEventListener('message', onMsg);
       navigator.serviceWorker.ready.then((reg) => {
         setStatus(s => ({ ...s, swReady: true }));
-        // Pergunta se os dados estão em cache
         if (reg.active) {
           reg.active.postMessage({ type: 'CHECK_DATA_CACHED' });
         }
@@ -356,20 +352,9 @@ function useOfflineStatus() {
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
 
-    // Listener específico para resposta do CHECK_DATA_CACHED
-    const onCacheCheck = (event) => {
-      if (event.data?.type === 'DATA_CACHED_STATUS') {
-        setStatus(s => ({ ...s, dataCached: event.data.cached }));
-      }
-    };
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', onCacheCheck);
-    }
-
     return () => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', onMsg);
-        navigator.serviceWorker.removeEventListener('message', onCacheCheck);
       }
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
@@ -381,12 +366,22 @@ function useOfflineStatus() {
 
 // ═══════════════════════════════════════════════════════════════
 //   HOOK usePWAInstall — captura beforeinstallprompt
+//   iOS Safari NÃO dispara esse evento; expomos isIOS para hint manual.
 // ═══════════════════════════════════════════════════════════════
 function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = React.useState(null);
   const [installed, setInstalled] = React.useState(
-    window.matchMedia('(display-mode: standalone)').matches
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true // iOS Safari
   );
+
+  // Detecta iOS (iPhone/iPad/iPod) — exclui iPadOS 13+ que reporta como Mac com touch
+  const isIOS = React.useMemo(() => {
+    const ua = window.navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return true;
+    // iPadOS 13+
+    return navigator.maxTouchPoints > 1 && /Macintosh/.test(ua);
+  }, []);
 
   React.useEffect(() => {
     const onPrompt = (e) => {
@@ -418,7 +413,8 @@ function usePWAInstall() {
   return {
     canInstall: !!deferredPrompt,
     installed,
-    install
+    install,
+    isIOS
   };
 }
 
@@ -448,6 +444,26 @@ const ANIMAL_TYPES = [
     subtypes: [{ id: "Lonômico", label: "Taturana (Lonomia)", desc: "Lagarta verde com espinhos, vive em troncos", color: "#228B22" }]
   },
 ];
+
+// Helper: detecta tipos CNES que não são hospitais/PS/UPA — dispensa antiveneno
+// mas o paciente não deve ser direcionado para administração lá.
+// Lista é heurística baseada em tipos CNES que não atendem emergência.
+function isUnidadeNaoEmergencia(tipoUnidade) {
+  if (!tipoUnidade) return false;
+  const t = tipoUnidade.toLowerCase();
+  const padroes = [
+    'central de abastecimento',
+    'central de regula',
+    'farm', // farmácia
+    'apoio',
+    'cooperativa',
+    'consult', // consultório isolado
+    'laborat',
+    'vigil', // vigilância sanitária
+    'secretaria',
+  ];
+  return padroes.some(p => t.includes(p));
+}
 
 // Helper: dado um specificType (ex "Botrópico"), retorna o animal correspondente
 function getAnimalBySpecificType(specificType) {
@@ -579,13 +595,14 @@ function SocorroPeconhentos() {
   const [gpsStatus, setGpsStatus] = React.useState("loading"); // loading | ok | fallback
   const [expanded, setExpanded] = React.useState(null);
   const [navAlert, setNavAlert] = React.useState(null);
+  const [showIosHint, setShowIosHint] = React.useState(false);
   const [triage, setTriage] = React.useState({ idade: null, tempo: null });
   const [showUrgency, setShowUrgency] = React.useState(true);
   const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
   const [accidentStartTime, setAccidentStartTime] = React.useState(null);
   const [fichaModal, setFichaModal] = React.useState(null); // hospital para ficha
+  const [fichaCopiada, setFichaCopiada] = React.useState(false);
   const [localPicada, setLocalPicada] = React.useState("");
-  const topRef = React.useRef(null);
 
   // ── AUTO-GPS no carregamento ──
   React.useEffect(() => {
@@ -628,6 +645,27 @@ function SocorroPeconhentos() {
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     );
   }, []);
+
+  // ── ESC fecha modais e bloqueia scroll do body quando há modal aberto ──
+  React.useEffect(() => {
+    const anyOpen = !!navAlert || !!fichaModal || showCityModal || showIosHint;
+    if (!anyOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (fichaModal) setFichaModal(null);
+        else if (navAlert) setNavAlert(null);
+        else if (showIosHint) setShowIosHint(false);
+        else if (showCityModal) setShowCityModal(false);
+      }
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [navAlert, fichaModal, showCityModal, showIosHint]);
 
   // ── CRONÔMETRO: calcular tempo estimado do acidente baseado na triagem ──
   React.useEffect(() => {
@@ -743,7 +781,7 @@ function SocorroPeconhentos() {
       }
       setResults(sorted);
     }
-  }, [step, userLocation, specificType]);
+  }, [step, userLocation, specificType, HOSPITALS]);
 
   // Função para ir direto aos resultados (pula step 2 se GPS já obtido)
   const goToResults = (type) => {
@@ -856,6 +894,41 @@ function SocorroPeconhentos() {
         onClose={() => setShowCityModal(false)}
       />
     )}
+    {showIosHint && (
+      <div role="dialog" aria-modal="true" aria-labelledby="iosHintTitle" onClick={() => setShowIosHint(false)} style={{
+        position: "fixed", inset: 0, zIndex: 1100,
+        background: "rgba(12,50,111,0.55)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 20, animation: "fadeIn 0.2s ease-out"
+      }}>
+        <div onClick={e => e.stopPropagation()} style={{
+          background: "#FFFFFF", borderRadius: 14, padding: 22,
+          maxWidth: 360, width: "100%", boxShadow: "0 20px 50px rgba(0,0,0,0.30)",
+          animation: "fadeUp 0.25s ease-out"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 id="iosHintTitle" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0C326F" }}>Instalar no iPhone/iPad</h3>
+            <button onClick={() => setShowIosHint(false)} aria-label="Fechar" style={{
+              background: "none", border: "none", fontSize: 22, color: "#9BA4B5",
+              cursor: "pointer", padding: 0, lineHeight: 1, fontWeight: 300
+            }}>×</button>
+          </div>
+          <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "#1F1F1F", lineHeight: 1.7 }}>
+            <li>Toque no botão <strong>Compartilhar</strong> <span style={{ display: "inline-block", padding: "0 6px", border: "1px solid #DEDEDE", borderRadius: 4, color: "#1351B4" }}>↑</span> na barra do Safari</li>
+            <li>Role e toque em <strong>Adicionar à Tela de Início</strong></li>
+            <li>Confirme em <strong>Adicionar</strong></li>
+          </ol>
+          <div style={{ marginTop: 14, padding: "10px 12px", background: "#F8FAFE", borderRadius: 8, fontSize: 11, color: "#636363", lineHeight: 1.5 }}>
+            O ícone do Mais Soro aparecerá na tela de início e funcionará offline mesmo sem internet.
+          </div>
+          <button onClick={() => setShowIosHint(false)} style={{
+            width: "100%", marginTop: 14, padding: "11px",
+            background: "#1351B4", color: "#FFFFFF", border: "none",
+            borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer"
+          }}>Entendi</button>
+        </div>
+      </div>
+    )}
     <div style={{
       minHeight: "100vh",
       background: "#F8F8F8",
@@ -917,6 +990,15 @@ function SocorroPeconhentos() {
                 letterSpacing: 0.3, textTransform: "uppercase"
               }}>+ Instalar app</button>
             )}
+            {/* iOS: prompt nativo não existe; mostra hint manual */}
+            {pwaInstall.isIOS && !pwaInstall.installed && !pwaInstall.canInstall && (
+              <button onClick={() => setShowIosHint(true)} aria-label="Como instalar no iPhone/iPad" style={{
+                fontSize: 9, fontWeight: 700, color: "#0C326F",
+                background: "#FFCD07", border: "none",
+                padding: "3px 8px", borderRadius: 3, cursor: "pointer",
+                letterSpacing: 0.3, textTransform: "uppercase"
+              }}>+ Instalar (iOS)</button>
+            )}
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.60)", fontWeight: 500 }}>Protótipo conceitual</span>
           </div>
         </div>
@@ -963,8 +1045,11 @@ function SocorroPeconhentos() {
       </div>
 
       {/* ═══ ALERTA DE NAVEGAÇÃO (MODAL) ═══ */}
-      {navAlert && (
-        <div style={{
+      {navAlert && (() => {
+        const telDigits = (navAlert.hospital.telefone || '').replace(/[^0-9]/g, "");
+        const hasPhone = telDigits.length > 0;
+        return (
+        <div role="dialog" aria-modal="true" aria-labelledby="navAlertTitle" style={{
           position: "fixed", inset: 0, zIndex: 100,
           background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)",
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -978,34 +1063,50 @@ function SocorroPeconhentos() {
           }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
-              <h3 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 8px", color: "#fff" }}>
+              <h3 id="navAlertTitle" style={{ fontSize: 18, fontWeight: 800, margin: "0 0 8px", color: "#fff" }}>
                 Confirme antes de ir!
               </h3>
               <p style={{ fontSize: 14, color: "#B0B8C8", lineHeight: 1.6, margin: 0 }}>
-                Ligue para o <strong style={{ color: "#fff" }}>{navAlert.hospital.unidade}</strong> e confirme a disponibilidade do soro antes de se deslocar.
+                {hasPhone ? (
+                  <>Ligue para o <strong style={{ color: "#fff" }}>{navAlert.hospital.unidade}</strong> e confirme a disponibilidade do soro antes de se deslocar.</>
+                ) : (
+                  <>O <strong style={{ color: "#fff" }}>{navAlert.hospital.unidade}</strong> não tem telefone cadastrado. Ligue para o <strong style={{ color: "#fff" }}>SAMU 192</strong> ou <strong style={{ color: "#fff" }}>CIATox 0800-722-6001</strong> para orientação antes de se deslocar.</>
+                )}
               </p>
             </div>
 
-            <div style={{
-              background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)",
-              borderRadius: 12, padding: 14, marginBottom: 16, textAlign: "center"
-            }}>
-              <div style={{ fontSize: 12, color: "#A8B0BF", marginBottom: 4 }}>Telefone do hospital</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#fca5a5", letterSpacing: 1 }}>{navAlert.hospital.telefone}</div>
-            </div>
+            {hasPhone && (
+              <div style={{
+                background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)",
+                borderRadius: 12, padding: 14, marginBottom: 16, textAlign: "center"
+              }}>
+                <div style={{ fontSize: 12, color: "#A8B0BF", marginBottom: 4 }}>Telefone do hospital</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#fca5a5", letterSpacing: 1 }}>{navAlert.hospital.telefone}</div>
+              </div>
+            )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <a href={`tel:${navAlert.hospital.telefone.replace(/[^0-9]/g, "")}`} style={{
-                padding: "14px", borderRadius: 12, textAlign: "center",
-                background: "#dc2626", color: "#fff", fontWeight: 700, fontSize: 15,
-                textDecoration: "none", animation: "pulseGlow 2s ease-in-out infinite"
-              }}>
-                📞 Ligar para o hospital primeiro
-              </a>
+              {hasPhone ? (
+                <a href={`tel:${telDigits}`} style={{
+                  padding: "14px", borderRadius: 12, textAlign: "center",
+                  background: "#dc2626", color: "#fff", fontWeight: 700, fontSize: 15,
+                  textDecoration: "none", animation: "pulseGlow 2s ease-in-out infinite"
+                }}>
+                  📞 Ligar para o hospital primeiro
+                </a>
+              ) : (
+                <a href="tel:192" style={{
+                  padding: "14px", borderRadius: 12, textAlign: "center",
+                  background: "#dc2626", color: "#fff", fontWeight: 700, fontSize: 15,
+                  textDecoration: "none", animation: "pulseGlow 2s ease-in-out infinite"
+                }}>
+                  📞 Ligar SAMU 192
+                </a>
+              )}
               <a href={navAlert.url} target="_blank" rel="noopener noreferrer" onClick={() => setNavAlert(null)} style={{
                 padding: "14px", borderRadius: 12, textAlign: "center",
-                background: "rgba(255,255,255,0.08)", color: "#fff", fontWeight: 700, fontSize: 14,
-                textDecoration: "none", border: "1px solid rgba(255,255,255,0.15)"
+                background: "rgba(255,255,255,0.10)", color: "#fff", fontWeight: 700, fontSize: 14,
+                textDecoration: "none", border: "1px solid rgba(255,255,255,0.20)"
               }}>
                 🗺️ Já confirmei, navegar agora
               </a>
@@ -1018,7 +1119,8 @@ function SocorroPeconhentos() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ═══ MODAL FICHA DE TRANSFERÊNCIA ═══ */}
       {fichaModal && (() => {
@@ -1043,7 +1145,7 @@ Sintomas possíveis: ${ficha.sinais}
 Ficha gerada por Mais Soro
 Protótipo Socorro Peçonhentos`;
         return (
-          <div style={{
+          <div role="dialog" aria-modal="true" aria-labelledby="fichaTitle" style={{
             position: "fixed", inset: 0, zIndex: 100,
             background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -1065,9 +1167,9 @@ Protótipo Socorro Peçonhentos`;
               }}>
                 <div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Ficha de Suporte APH</div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginTop: 2 }}>📋 Mostrar ao médico</div>
+                  <div id="fichaTitle" style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginTop: 2 }}>📋 Mostrar ao médico</div>
                 </div>
-                <button onClick={() => setFichaModal(null)} style={{
+                <button onClick={() => setFichaModal(null)} aria-label="Fechar ficha" style={{
                   background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
                   width: 32, height: 32, borderRadius: 10, fontSize: 18, cursor: "pointer"
                 }}>✕</button>
@@ -1140,12 +1242,35 @@ Protótipo Socorro Peçonhentos`;
                 }}>
                   📱 Enviar via WhatsApp ao hospital
                 </a>
-                <button onClick={() => { navigator.clipboard?.writeText(fichaText); }} style={{
+                <button onClick={async () => {
+                  try {
+                    if (navigator.clipboard?.writeText) {
+                      await navigator.clipboard.writeText(fichaText);
+                    } else {
+                      // Fallback para navegadores sem Clipboard API (iOS Safari sem HTTPS, etc)
+                      const ta = document.createElement('textarea');
+                      ta.value = fichaText;
+                      ta.style.position = 'fixed';
+                      ta.style.opacity = '0';
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(ta);
+                    }
+                    setFichaCopiada(true);
+                    setTimeout(() => setFichaCopiada(false), 2200);
+                  } catch (err) {
+                    console.warn('[Mais Soro] Falha ao copiar ficha:', err);
+                    alert('Não foi possível copiar. Selecione o texto manualmente e copie.');
+                  }
+                }} style={{
                   padding: "12px", borderRadius: 12, textAlign: "center",
-                  background: "rgba(0,119,200,0.15)", color: "#5EB3E6", fontWeight: 700, fontSize: 13,
-                  border: "1px solid rgba(0,119,200,0.35)", cursor: "pointer"
+                  background: fichaCopiada ? "rgba(22,136,33,0.18)" : "rgba(0,119,200,0.15)",
+                  color: fichaCopiada ? "#168821" : "#1351B4", fontWeight: 700, fontSize: 13,
+                  border: `1px solid ${fichaCopiada ? "rgba(22,136,33,0.45)" : "rgba(0,119,200,0.35)"}`,
+                  cursor: "pointer", transition: "all 0.18s ease"
                 }}>
-                  📋 Copiar texto da ficha
+                  {fichaCopiada ? "✅ Copiado!" : "📋 Copiar texto da ficha"}
                 </button>
                 <div style={{ fontSize: 10, color: "#7A8394", textAlign: "center", marginTop: 4, lineHeight: 1.5 }}>
                   Mostre esta tela ao médico na chegada ao hospital<br/>
@@ -1157,7 +1282,7 @@ Protótipo Socorro Peçonhentos`;
         );
       })()}
 
-      <div ref={topRef} style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 80px" }}>
 
         {/* Header */}
         <div style={{ textAlign: "center", padding: "24px 0 16px", animation: "fadeUp 0.4s ease-out" }}>
@@ -1259,15 +1384,15 @@ Protótipo Socorro Peçonhentos`;
         {step === 2 && (
           <div style={{ animation: "fadeUp 0.3s ease-out" }}>
             <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#1351B4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>← Voltar</button>
-            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 20, padding: 32, textAlign: "center", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ background: "#FFFFFF", borderRadius: 20, padding: 32, textAlign: "center", border: "1px solid #DEDEDE", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
               <div style={{ width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px", background: "rgba(220,38,38,0.10)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>📍</div>
-              <h2 style={{ fontSize: 20, marginBottom: 8 }}>Localização</h2>
-              <p style={{ fontSize: 13, color: "#A8B0BF", marginBottom: 24, lineHeight: 1.5 }}>
-                Precisamos da sua localização para encontrar o hospital mais próximo {specificType === "__COMPLETO__" ? <strong style={{ color: "#f59e0b" }}>com atendimento mais completo</strong> : <>com soro <strong style={{ color: "#f59e0b" }}>{specificType}</strong></>}
+              <h2 style={{ fontSize: 20, marginBottom: 8, color: "#0C326F" }}>Localização</h2>
+              <p style={{ fontSize: 13, color: "#636363", marginBottom: 24, lineHeight: 1.5 }}>
+                Precisamos da sua localização para encontrar o hospital mais próximo {specificType === "__COMPLETO__" ? <strong style={{ color: "#A66800" }}>com atendimento mais completo</strong> : <>com soro <strong style={{ color: "#A66800" }}>{specificType}</strong></>}
               </p>
               <button onClick={requestLocation} disabled={loadingGPS} style={{
                 width: "100%", padding: "16px 24px",
-                background: loadingGPS ? "#2D3548" : "linear-gradient(135deg, #dc2626, #b91c1c)",
+                background: loadingGPS ? "#9BA4B5" : "linear-gradient(135deg, #dc2626, #b91c1c)",
                 border: "none", borderRadius: 14, color: "#fff", fontWeight: 700,
                 fontSize: 16, cursor: loadingGPS ? "default" : "pointer",
                 boxShadow: loadingGPS ? "none" : "0 4px 24px rgba(220,38,38,0.4)"
@@ -1289,7 +1414,7 @@ Protótipo Socorro Peçonhentos`;
             <button onClick={() => { setStep(0); setAnimalType(null); setSpecificType(null); setResults([]); setLocationError(false); setTriage({ idade: null, tempo: null }); }} style={{ background: "none", border: "none", color: "#1351B4", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 12, padding: 0 }}>← Nova busca</button>
 
             {locationError && (
-              <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 12, color: "#fbbf24" }}>
+              <div role="alert" style={{ background: "#FFF8E8", border: "1px solid #FFCD07", borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 12, color: "#8A6500", fontWeight: 600 }}>
                 GPS indisponível. Você pode mudar a localização tocando em "Mudar localização". Em emergência, ligue SAMU 192.
               </div>
             )}
@@ -1395,14 +1520,15 @@ Protótipo Socorro Peçonhentos`;
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {[
                       { id: "crianca", label: "Criança (< 12)", color: "#dc2626" },
-                      { id: "adulto", label: "Adulto (12-60)", color: "#3b82f6" },
-                      { id: "idoso", label: "Idoso (> 60)", color: "#f59e0b" },
+                      { id: "adulto", label: "Adulto (12-60)", color: "#1351B4" },
+                      { id: "idoso", label: "Idoso (> 60)", color: "#A66800" },
                     ].map(opt => (
-                      <button key={opt.id} className="triage-btn" onClick={() => setTriage(t => ({ ...t, idade: opt.id }))} style={{
+                      <button key={opt.id} className="triage-btn" aria-pressed={triage.idade === opt.id} onClick={() => setTriage(t => ({ ...t, idade: opt.id }))} style={{
                         padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: triage.idade === opt.id ? `${opt.color}25` : "rgba(255,255,255,0.04)",
-                        border: `1.5px solid ${triage.idade === opt.id ? opt.color : "rgba(255,255,255,0.08)"}`,
-                        color: triage.idade === opt.id ? opt.color : "#9BA4B5"
+                        background: triage.idade === opt.id ? `${opt.color}1F` : "#FFFFFF",
+                        border: `1.5px solid ${triage.idade === opt.id ? opt.color : "#DEDEDE"}`,
+                        color: triage.idade === opt.id ? opt.color : "#1F1F1F",
+                        cursor: "pointer"
                       }}>{opt.label}</button>
                     ))}
                   </div>
@@ -1418,11 +1544,12 @@ Protótipo Socorro Peçonhentos`;
                       { id: "3a6h", label: "3 a 6 horas" },
                       { id: "mais6h", label: "> 6 horas" },
                     ].map(opt => (
-                      <button key={opt.id} className="triage-btn" onClick={() => setTriage(t => ({ ...t, tempo: opt.id }))} style={{
+                      <button key={opt.id} className="triage-btn" aria-pressed={triage.tempo === opt.id} onClick={() => setTriage(t => ({ ...t, tempo: opt.id }))} style={{
                         padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: triage.tempo === opt.id ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)",
-                        border: `1.5px solid ${triage.tempo === opt.id ? "#f59e0b" : "rgba(255,255,255,0.08)"}`,
-                        color: triage.tempo === opt.id ? "#fbbf24" : "#9BA4B5"
+                        background: triage.tempo === opt.id ? "rgba(245,158,11,0.15)" : "#FFFFFF",
+                        border: `1.5px solid ${triage.tempo === opt.id ? "#A66800" : "#DEDEDE"}`,
+                        color: triage.tempo === opt.id ? "#A66800" : "#1F1F1F",
+                        cursor: "pointer"
                       }}>{opt.label}</button>
                     ))}
                   </div>
@@ -1430,20 +1557,20 @@ Protótipo Socorro Peçonhentos`;
 
                 {/* Resultado da triagem */}
                 {(triage.idade || triage.tempo) && (
-                  <div style={{
+                  <div role="status" style={{
                     marginTop: 12, padding: "10px 14px", borderRadius: 10,
                     background: severityLevel === "critico" || severityLevel === "grave"
-                      ? "rgba(220,38,38,0.12)" : "rgba(245,158,11,0.10)",
-                    border: `1px solid ${severityLevel === "critico" || severityLevel === "grave" ? "rgba(220,38,38,0.3)" : "rgba(245,158,11,0.25)"}`,
+                      ? "rgba(208,79,79,0.10)" : "rgba(245,158,11,0.10)",
+                    border: `1px solid ${severityLevel === "critico" || severityLevel === "grave" ? "rgba(208,79,79,0.40)" : "rgba(245,158,11,0.40)"}`,
                     animation: "fadeUp 0.2s ease-out"
                   }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: severityLevel === "critico" || severityLevel === "grave" ? "#fca5a5" : "#fbbf24" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: severityLevel === "critico" || severityLevel === "grave" ? "#A03333" : "#A66800" }}>
                       {severityLevel === "critico" ? "⚠ SITUAÇÃO CRÍTICA: Desloque-se imediatamente" :
                        severityLevel === "grave" ? "⚠ RISCO ELEVADO: Priorize rapidez no atendimento" :
                        "ℹ Atendimento recomendado com agilidade"}
                     </div>
                     {triage.idade === "crianca" && (
-                      <div style={{ fontSize: 11, color: "#fca5a5", marginTop: 4 }}>
+                      <div style={{ fontSize: 11, color: "#A03333", marginTop: 4 }}>
                         Crianças têm maior risco de complicações graves. Informe o peso da criança ao hospital.
                       </div>
                     )}
@@ -1471,6 +1598,7 @@ Protótipo Socorro Peçonhentos`;
               {results.map((h, i) => {
                 // Diferenciação visual de hospitais inativos
                 const isInativo = !h.ativo;
+                const isNaoEmergencia = isUnidadeNaoEmergencia(h.tipo_unidade);
                 const cardBorder = isInativo
                   ? "1.5px dashed #B0B8C8"
                   : (i === 0 ? "2px solid #1351B4" : "1px solid #DEDEDE");
@@ -1480,8 +1608,8 @@ Protótipo Socorro Peçonhentos`;
                 const cardBg = isInativo ? "#FAFBFC" : "#FFFFFF";
                 const cardOpacity = isInativo ? 0.78 : 1;
 
-                // Status do destaque "Mais próximo" — só aparece em ativos
-                const showTopBadge = i === 0 && !isInativo;
+                // Status do destaque "Mais próximo" — só aparece em ativos e que sejam emergência
+                const showTopBadge = i === 0 && !isInativo && !isNaoEmergencia;
 
                 // Indicador de qualidade do geocoding (centróide = aviso)
                 const geoIsApprox = h.geocoding_quality === "municipio_uf" ||
@@ -1495,8 +1623,8 @@ Protótipo Socorro Peçonhentos`;
                   animation: `fadeUp ${0.2 + i*0.06}s ease-out`, cursor: "pointer"
                 }} onClick={() => setExpanded(expanded === i ? null : i)}>
                   <div style={{ padding: "16px 18px" }}>
-                    {/* Linha de status (badges de cima): destaque OU desativado */}
-                    {(showTopBadge || isInativo) && (
+                    {/* Linha de status (badges de cima): destaque OU desativado OU não-emergência */}
+                    {(showTopBadge || isInativo || isNaoEmergencia) && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
                         {showTopBadge && (
                           <span style={{
@@ -1514,6 +1642,15 @@ Protótipo Socorro Peçonhentos`;
                             letterSpacing: 0.5, textTransform: "uppercase",
                             display: "inline-flex", alignItems: "center", gap: 4
                           }}>⚠ Desativado no CNES</span>
+                        )}
+                        {isNaoEmergencia && !isInativo && (
+                          <span title={`Tipo CNES: ${h.tipo_unidade} — pode armazenar soro mas não atende emergência`} style={{
+                            fontSize: 10, fontWeight: 800, color: "#A66800",
+                            background: "#FFF8E8", border: "1px solid #FFCD07",
+                            padding: "3px 10px", borderRadius: 4,
+                            letterSpacing: 0.5, textTransform: "uppercase",
+                            display: "inline-flex", alignItems: "center", gap: 4
+                          }}>⚠ Confirme atendimento</span>
                         )}
                       </div>
                     )}
@@ -1580,10 +1717,13 @@ Protótipo Socorro Peçonhentos`;
                       </div>
                     </div>
 
-                    {expanded === i && (
-                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.08)", animation: "fadeUp 0.2s ease-out" }}>
-                        <div style={{ fontSize: 12, color: "#B0B8C8", marginBottom: 8 }}>📍 {h.endereco}</div>
-                        <div style={{ fontSize: 12, color: "#B0B8C8", marginBottom: 12 }}>📞 {h.telefone}</div>
+                    {expanded === i && (() => {
+                      const telDigits = (h.telefone || '').replace(/[^0-9]/g, "");
+                      const hasPhone = telDigits.length > 0;
+                      return (
+                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #E5E7EB", animation: "fadeUp 0.2s ease-out" }}>
+                        <div style={{ fontSize: 12, color: "#636363", marginBottom: 8 }}>📍 {h.endereco || "Endereço não cadastrado"}</div>
+                        <div style={{ fontSize: 12, color: "#636363", marginBottom: 12 }}>📞 {hasPhone ? h.telefone : <em style={{ color: "#9BA4B5" }}>Telefone não cadastrado</em>}</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 14 }}>
                           {h.atendimentos.map(a => {
                             const isMatch = specificType !== "__COMPLETO__" && a === specificType;
@@ -1591,19 +1731,26 @@ Protótipo Socorro Peçonhentos`;
                             return (
                               <span key={a} style={{
                                 fontSize: 10, padding: "3px 7px", borderRadius: 6,
-                                background: isMatch ? "rgba(220,38,38,0.2)" : isCompleto ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.08)",
-                                color: isMatch ? "#fca5a5" : isCompleto ? "#fbbf24" : "#9BA4B5",
-                                border: isMatch ? "1px solid rgba(220,38,38,0.3)" : "1px solid transparent",
-                                fontWeight: isMatch || isCompleto ? 700 : 400
+                                background: isMatch ? "rgba(208,79,79,0.12)" : isCompleto ? "rgba(245,158,11,0.12)" : "#F3F4F6",
+                                color: isMatch ? "#A03333" : isCompleto ? "#A66800" : "#636363",
+                                border: isMatch ? "1px solid rgba(208,79,79,0.30)" : "1px solid #E5E7EB",
+                                fontWeight: isMatch || isCompleto ? 700 : 500
                               }}>{a}</span>
                             );
                           })}
                         </div>
                         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                          <a href={`tel:${h.telefone.replace(/[^0-9]/g, "")}`} style={{
-                            flex: 1, padding: "12px", borderRadius: 10, textAlign: "center",
-                            background: "#D04F4F", color: "#fff", fontWeight: 700, fontSize: 13, textDecoration: "none"
-                          }}>📞 Ligar</a>
+                          {hasPhone ? (
+                            <a href={`tel:${telDigits}`} style={{
+                              flex: 1, padding: "12px", borderRadius: 10, textAlign: "center",
+                              background: "#D04F4F", color: "#fff", fontWeight: 700, fontSize: 13, textDecoration: "none"
+                            }}>📞 Ligar</a>
+                          ) : (
+                            <a href="tel:192" onClick={(e) => e.stopPropagation()} style={{
+                              flex: 1, padding: "12px", borderRadius: 10, textAlign: "center",
+                              background: "#D04F4F", color: "#fff", fontWeight: 700, fontSize: 13, textDecoration: "none"
+                            }}>📞 SAMU 192</a>
+                          )}
                           <button onClick={(e) => { e.stopPropagation(); handleNavigate(h); }} style={{
                             flex: 1, padding: "12px", borderRadius: 10, textAlign: "center",
                             background: "#1351B4", color: "#fff", fontWeight: 700,
@@ -1616,7 +1763,8 @@ Protótipo Socorro Peçonhentos`;
                           fontSize: 13, border: "none", cursor: "pointer"
                         }}>📋 Gerar Ficha para o Hospital</button>
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
                 );

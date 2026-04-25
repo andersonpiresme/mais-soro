@@ -6,10 +6,10 @@
  *   - DADOS: stale-while-revalidate (responde do cache, atualiza em background)
  *   - DEMAIS: network-first com fallback para cache
  *
- * IMPORTANTE: ao alterar dados em data/*.json, troque DATA_VERSION para forçar refresh.
+ * IMPORTANTE: ao alterar dados em data/*.json, troque VERSION para forçar refresh.
  */
 
-const VERSION = 'mais-soro-v3.2';
+const VERSION = 'mais-soro-v3.3';
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
@@ -31,7 +31,7 @@ const DATA_ASSETS = [
   './data/municipios.json',
   './data/icons/cobra.svg',
   './data/icons/aranha.svg',
-  './data/icons/escopiao.svg',
+  './data/icons/escorpiao.svg',
   './data/icons/lagarta.svg'
 ];
 
