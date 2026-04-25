@@ -1,0 +1,80 @@
+{
+  "versao": 1,
+  "descricao": "Override manual de coordenadas para casos onde o geocoding automático falhou ou retornou UF errada. Aplicado pelo React em cima do hospitais_pwa_v3.json",
+  "fonte": "Coordenadas IBGE de centros municipais; correções de grafia validadas",
+  "total_overrides": 12,
+  "overrides": {
+    "2121921": {
+      "lat": -18.7167,
+      "lng": -49.9347,
+      "override_reason": "Grafia \"Ipaiçu\" corrigida para \"Ipiaçu\" (IBGE)",
+      "override_quality": "municipio_uf_manual"
+    },
+    "2328437": {
+      "lat": -5.535,
+      "lng": -39.2761,
+      "override_reason": "Centro do município (IBGE)",
+      "override_quality": "municipio_uf_manual"
+    },
+    "2464454": {
+      "lat": -3.2086,
+      "lng": -43.4036,
+      "override_reason": "Grafia \"URBANOS SANTOS\" corrigida para \"Urbano Santos\" (IBGE)",
+      "override_quality": "municipio_uf_manual"
+    },
+    "2808595": {
+      "lat": -10.7308,
+      "lng": -62.7517,
+      "override_reason": "Centro do município (IBGE)",
+      "override_quality": "municipio_uf_manual"
+    },
+    "2457121": {
+      "lat": -2.0894,
+      "lng": -45.9408,
+      "override_reason": "Centro do município (IBGE)",
+      "override_quality": "municipio_uf_manual"
+    },
+    "7628749": {
+      "lat": -6.4839,
+      "lng": -46.5314,
+      "override_reason": "Grafia \"São Predro dos Crentes\" corrigida para \"São Pedro dos Crentes\" (IBGE)",
+      "override_quality": "municipio_uf_manual"
+    },
+    "2311593": {
+      "lat": -12.0731,
+      "lng": -51.6594,
+      "override_reason": "Possível grafia incorreta — coord aproximada do centro do município MT",
+      "override_quality": "municipio_uf_manual"
+    },
+    "2622491": {
+      "lat": -2.5,
+      "lng": -48.5,
+      "override_reason": "Cidade homônima em PA (não confundir com Balneário Piçarras/SC) — coord aproximada",
+      "override_quality": "municipio_uf_manual"
+    },
+    "494402": {
+      "lat": -1.5266,
+      "lng": -52.5778,
+      "override_reason": "UBSI Tiriyó: cadastro CNES está em AP, mas localização física é em Almeirim/PA (atende população indígena fronteiriça)",
+      "override_quality": "endereco_completo_manual"
+    },
+    "2916118": {
+      "lat": -1.5266,
+      "lng": -52.5778,
+      "override_reason": "UBSI Kuxaré: cadastro CNES em AP, localização física em Almeirim/PA",
+      "override_quality": "endereco_completo_manual"
+    },
+    "494747": {
+      "lat": -1.9114,
+      "lng": -55.5181,
+      "override_reason": "UBSI Bona Apalai: cadastro CNES em AP, localização física em Óbidos/PA",
+      "override_quality": "endereco_completo_manual"
+    },
+    "2559188": {
+      "lat": -25.4284,
+      "lng": -49.2733,
+      "override_reason": "Município \"Paulo de Frontin\" não localizado no PR — fallback para Curitiba (capital). REVISAR DADOS DO CNES.",
+      "override_quality": "fallback_capital"
+    }
+  }
+}
