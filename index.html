@@ -129,7 +129,20 @@ function useHospitalsData() {
 
         const hospitals = (hospData.unidades || [])
           .map(u => adaptHospital(u, overrides[u.cnes]))
-          .filter(h => h.lat && h.lng);  // remove os que ficaram sem coord
+          .filter(h => h.lat && h.lng)  // remove os que ficaram sem coord
+          // ─── PROTEÇÃO DEFENSIVA: nunca exibir como "mais próximo" hospitais com
+          //     coordenada de fallback de capital. Esses casos têm coord do centro
+          //     da capital estadual (não do hospital real) — gerariam ranking errado.
+          //     Esses hospitais ficam fora do ranking mas continuam consultáveis
+          //     via busca por cidade. Se a curadoria evoluir e a coord verdadeira
+          //     for descoberta, o flag 'fallback_capital' some e o hospital volta.
+          .filter(h => {
+            if (h.geocoding_quality === 'fallback_capital') {
+              console.warn('[Mais Soro] Hospital excluído do ranking por fallback_capital:', h.cnes, h.unidade, h.municipio);
+              return false;
+            }
+            return true;
+          });
 
         console.log('[Mais Soro] Hospitais válidos após adapter:', hospitals.length);
 
@@ -988,8 +1001,6 @@ function SocorroPeconhentos() {
         <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Utilidade Pública</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.60)", fontWeight: 500 }}>Protótipo conceitual</span>
-
             {/* Status discreto de cache offline */}
             {offlineStatus.dataCached && (
               <span title="Dados disponíveis offline" style={{
@@ -1025,6 +1036,7 @@ function SocorroPeconhentos() {
                 letterSpacing: 0.3, textTransform: "uppercase"
               }}>+ Instalar (iOS)</button>
             )}
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.60)", fontWeight: 500 }}>Protótipo conceitual</span>
           </div>
         </div>
       </div>
@@ -1850,13 +1862,13 @@ Protótipo Socorro Peçonhentos`;
 
                 color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
 
-              }}>E-mail</a>
+              }}>contato@maissoro.org</a>
               <a href="https://www.linkedin.com/in/andersonpires" target="_blank" rel="noopener noreferrer" style={{
                 flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
                 borderRadius: 6, padding: "8px 10px", textDecoration: "none",
                 color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
               }}>LinkedIn</a>
-              <a href="https://www.instagram.com/maissoro_org/" target="_blank" rel="noopener noreferrer" style={{
+              <a href="https://www.instagram.com/andersonpires.me/" target="_blank" rel="noopener noreferrer" style={{
                 flex: "1 1 auto", background: "#F8F8F8", border: "1px solid #E5E7EB",
                 borderRadius: 6, padding: "8px 10px", textDecoration: "none",
                 color: "#636363", fontWeight: 600, fontSize: 11, textAlign: "center"
