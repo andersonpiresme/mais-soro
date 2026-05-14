@@ -71,10 +71,10 @@
       "override_quality": "endereco_completo_manual"
     },
     "2559188": {
-      "lat": -25.4284,
-      "lng": -49.2733,
-      "override_reason": "Município \"Paulo de Frontin\" não localizado no PR — fallback para Curitiba (capital). REVISAR DADOS DO CNES.",
-      "override_quality": "fallback_capital"
+      "lat": -26.0430034,
+      "lng": -50.8335084,
+      "override_reason": "CNES grafou município como 'Paulo de Frontin/PR' (não existe — homônimo no RJ). Hospital Mun. São João Batista localizado em Paulo Frontin (distrito de Paula Freitas/PR), CEP 84635-000, confirmado via Google Places (place_id ChIJc9VqW4hQ5pQRZqSDUlbgf4M, confidence 0.92).",
+      "override_quality": "endereco_completo_manual"
     }
   }
 }
